@@ -1,0 +1,38 @@
+# AI Pipeline Dependencies for Driver Wellness Assistant
+
+# Computer Vision & Face Detection
+opencv-python>=4.8.0
+opencv-contrib-python>=4.8.0
+mediapipe>=0.10.0
+dlib>=19.24.0
+
+# Deep Learning Frameworks
+tensorflow>=2.13.0
+torch>=2.0.0
+torchvision>=0.15.0
+
+# Audio Processing
+librosa>=0.10.0
+soundfile>=0.12.0
+pyaudio>=0.2.11
+
+# Numerical Computing
+numpy>=1.24.0,<2.0.0
+scipy>=1.10.0
+
+# Data Processing & Visualization
+pandas>=2.0.0
+matplotlib>=3.7.0
+seaborn>=0.12.0
+
+# Model Utilities
+scikit-learn>=1.3.0
+imutils>=0.5.4
+
+# Optional: Face Detection Models
+facenet-pytorch>=2.5.0
+mtcnn>=0.1.1
+
+# Utility
+pillow>=10.0.0
+tqdm>=4.65.0
