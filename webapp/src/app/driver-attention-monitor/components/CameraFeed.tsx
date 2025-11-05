@@ -6,6 +6,14 @@ import Icon from '@/components/ui/AppIcon';
 interface CameraFeedProps {
   isPrivacyMode: boolean;
   onCameraStatus: (status: boolean) => void;
+  // env controls are passed down so the camera can include them in requests
+  env?: Record<string, any>;
+  // callback for receiving model predictions from backend
+  onPrediction?: (data: any) => void;
+  // whether to display backend preview overlay
+  showPreview?: boolean;
+  // auto-detected environment flags from backend (night, sunglasses, etc.)
+  autoEnv?: { night_detected?: boolean; sunglasses_detected?: boolean; vibration_detected?: boolean } | null;
 }
 
 interface FaceLandmark {
@@ -13,13 +21,17 @@ interface FaceLandmark {
   y: number;
 }
 
-const CameraFeed = ({ isPrivacyMode, onCameraStatus }: CameraFeedProps) => {
+const CameraFeed = ({ isPrivacyMode, onCameraStatus, env, onPrediction, showPreview = true, autoEnv = null }: CameraFeedProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const captureRef = useRef<HTMLCanvasElement | null>(null);
+  const [steeringAngle, setSteeringAngle] = useState<number | null>(null);
+  const [accelMag, setAccelMag] = useState<number | null>(null);
+  const [vibrationDetected, setVibrationDetected] = useState<boolean>(false);
+  const [isMobileDevice, setIsMobileDevice] = useState<boolean>(false);
+  const [gyroAvailable, setGyroAvailable] = useState<boolean>(false);
   const [isHydrated, setIsHydrated] = useState(false);
   const [cameraPermission, setCameraPermission] = useState<'granted' | 'denied' | 'prompt'>('prompt');
   const [isSimulated, setIsSimulated] = useState(false);
-  const [faceLandmarks, setFaceLandmarks] = useState<FaceLandmark[]>([]);
 
   useEffect(() => {
     setIsHydrated(true);
@@ -52,12 +64,8 @@ const CameraFeed = ({ isPrivacyMode, onCameraStatus }: CameraFeedProps) => {
     const startSimulatedFeed = () => {
       // Simulate face landmarks for demo
       const interval = setInterval(() => {
-        const mockLandmarks: FaceLandmark[] = Array.from({ length: 468 }, (_, i) => ({
-          x: 200 + Math.sin(Date.now() / 1000 + i) * 100,
-          y: 150 + Math.cos(Date.now() / 1000 + i) * 80,
-        }));
-        setFaceLandmarks(mockLandmarks);
-      }, 100);
+        // simulated tick (no overlays drawn in UI)
+      }, 1000);
 
       return () => clearInterval(interval);
     };
@@ -69,50 +77,125 @@ const CameraFeed = ({ isPrivacyMode, onCameraStatus }: CameraFeedProps) => {
       startSimulatedFeed();
     }
 
+    // Create capture canvas for sending frames to backend (reduced resolution)
+    if (!captureRef.current) {
+      const off = document.createElement('canvas');
+      // smaller to reduce bandwidth
+      off.width = 320;
+      off.height = 240;
+      captureRef.current = off;
+    }
+
+    // Device orientation for steering angle (if available)
+    const handleOrientation = (ev: DeviceOrientationEvent) => {
+      // Use gamma (left-right tilt) as a rough steering proxy
+      if (ev.gamma != null) {
+        setSteeringAngle(ev.gamma);
+        setGyroAvailable(true);
+      }
+    };
+
+    // Device motion for vibration / pothole detection
+    const handleMotion = (ev: DeviceMotionEvent) => {
+      try {
+        const a = (ev.acceleration || ev.accelerationIncludingGravity) as any;
+        if (!a) return;
+        const x = a.x || 0;
+        const y = a.y || 0;
+        const z = a.z || 0;
+        const mag = Math.sqrt(x*x + y*y + z*z);
+        setAccelMag(mag);
+        // crude threshold for bump/vibration
+        setVibrationDetected(mag > 12);
+        if (ev.rotationRate) setGyroAvailable(true);
+      } catch (e) {
+        // ignore
+      }
+    };
+
+    window.addEventListener('deviceorientation', handleOrientation as EventListener);
+    window.addEventListener('devicemotion', handleMotion as EventListener);
+
+    // detect mobile heuristically
+    const mobile = /Mobi|Android|iPhone|iPad|iPod/.test(navigator.userAgent) || ('ontouchstart' in window);
+    setIsMobileDevice(mobile);
+
+    // cleanup
+    const cleanupOrientation = () => {
+      window.removeEventListener('deviceorientation', handleOrientation as EventListener);
+      window.removeEventListener('devicemotion', handleMotion as EventListener);
+    };
+
     return () => {
       if (videoRef.current?.srcObject) {
         const stream = videoRef.current.srcObject as MediaStream;
         stream.getTracks().forEach(track => track.stop());
       }
+      cleanupOrientation();
     };
   }, [isHydrated, isPrivacyMode, onCameraStatus]);
 
-  const drawFaceMesh = () => {
-    if (!canvasRef.current) return;
-    
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    // Draw face landmarks
-    ctx.fillStyle = '#0F766E';
-    ctx.strokeStyle = '#14B8A6';
-    ctx.lineWidth = 1;
+  // helper to read env from props (defined before sendFrame to avoid TS warnings)
+  const propsEnv = () => (typeof env === 'object' && env ? env : {});
 
-    faceLandmarks.forEach((landmark, index) => {
-      if (index % 3 === 0) { // Draw every 3rd landmark for performance
-        ctx.beginPath();
-        ctx.arc(landmark.x, landmark.y, 1, 0, 2 * Math.PI);
-        ctx.fill();
-      }
-    });
-
-    // Draw face outline
-    if (faceLandmarks.length > 0) {
-      ctx.beginPath();
-      ctx.strokeStyle = '#14B8A6';
-      ctx.lineWidth = 2;
-      ctx.strokeRect(150, 100, 200, 250);
-    }
-  };
-
+  // Periodically capture a frame and send to backend for prediction
   useEffect(() => {
-    if (faceLandmarks.length > 0) {
-      drawFaceMesh();
-    }
-  }, [faceLandmarks]);
+    let interval: number | undefined;
+    const sendFrame = async () => {
+      if (isSimulated) return; // skip when simulated
+      if (!videoRef.current || !captureRef.current) return;
+
+      try {
+        const v = videoRef.current;
+        const c = captureRef.current as HTMLCanvasElement;
+        const ctx = c.getContext('2d');
+        if (!ctx) return;
+        // draw current frame (centered crop)
+        const sx = Math.max(0, (v.videoWidth - v.videoHeight * (c.width / c.height)) / 2);
+        const sy = 0;
+        try {
+          ctx.drawImage(v, sx, sy, v.videoWidth - sx * 2, v.videoHeight - sy * 2, 0, 0, c.width, c.height);
+        } catch (e) {
+          ctx.drawImage(v, 0, 0, c.width, c.height);
+        }
+
+        const dataUrl = c.toDataURL('image/jpeg', 0.6);
+
+        const payload = {
+          frame: dataUrl,
+          env: propsEnv(),
+          sensors: {
+            steeringAngle,
+            accel: accelMag ? { magnitude: accelMag } : undefined,
+            vibration: vibrationDetected,
+            isMobile: isMobileDevice,
+            gyroAvailable
+          }
+        };
+
+        const res = await fetch('http://localhost:5000/predict', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) return;
+        const json = await res.json();
+        const result = json.result;
+        const sensors = json.sensors || {};
+        if (onPrediction) onPrediction({ ...result, sensors });
+
+      } catch (e) {
+        // ignore network errors for now
+      }
+    };
+
+    // start interval when camera active
+    interval = window.setInterval(sendFrame, 800);
+    return () => { if (interval) window.clearInterval(interval); };
+  }, [isSimulated, steeringAngle, accelMag, vibrationDetected, isMobileDevice, gyroAvailable, env, onPrediction]);
+
 
   if (!isHydrated) {
     return (
@@ -124,24 +207,6 @@ const CameraFeed = ({ isPrivacyMode, onCameraStatus }: CameraFeedProps) => {
 
   return (
     <div className="relative w-full h-80 bg-card rounded-lg border border-border overflow-hidden">
-      {/* Camera Status Indicator */}
-      <div className="absolute top-3 left-3 z-10 flex items-center space-x-2 bg-background/80 backdrop-blur-glass rounded-md px-2 py-1">
-        <div className={`w-2 h-2 rounded-full ${cameraPermission === 'granted' ? 'bg-success' : 'bg-warning'}`} />
-        <span className="text-xs font-medium text-foreground">
-          {isSimulated ? 'Simulated' : 'Live'}
-        </span>
-      </div>
-
-      {/* Privacy Mode Indicator */}
-      {isPrivacyMode && (
-        <div className="absolute top-3 right-3 z-10 bg-background/80 backdrop-blur-glass rounded-md px-2 py-1">
-          <div className="flex items-center space-x-1">
-            <Icon name="ShieldCheckIcon" size={14} className="text-secondary" />
-            <span className="text-xs font-medium text-foreground">Privacy Mode</span>
-          </div>
-        </div>
-      )}
-
       {/* Video Feed */}
       {!isSimulated ? (
         <video
@@ -156,27 +221,10 @@ const CameraFeed = ({ isPrivacyMode, onCameraStatus }: CameraFeedProps) => {
           <div className="text-center">
             <Icon name="VideoCameraIcon" size={48} className="text-muted-foreground mx-auto mb-2" />
             <p className="text-sm text-muted-foreground">Simulated Camera Feed</p>
-            <p className="text-xs text-muted-foreground mt-1">Face mesh detection active</p>
           </div>
         </div>
       )}
-
-      {/* Face Mesh Overlay Canvas */}
-      <canvas
-        ref={canvasRef}
-        width={640}
-        height={480}
-        className="absolute inset-0 w-full h-full pointer-events-none"
-        style={{ mixBlendMode: 'screen' }}
-      />
-
-      {/* Processing Indicator */}
-      <div className="absolute bottom-3 left-3 z-10 bg-background/80 backdrop-blur-glass rounded-md px-2 py-1">
-        <div className="flex items-center space-x-2">
-          <div className="w-2 h-2 bg-secondary rounded-full animate-pulse" />
-          <span className="text-xs font-medium text-foreground">Processing</span>
-        </div>
-      </div>
+      {/* No overlays, no text — raw camera feed only */}
     </div>
   );
 };

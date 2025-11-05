@@ -44,27 +44,30 @@ const TrendChart = ({ data, className = '' }: TrendChartProps) => {
   }
 
   return (
-    <div className={`bg-card rounded-lg border border-border p-4 ${className}`}>
-      <div className="flex items-center justify-between mb-4">
+    <div className={`${className}`}>
+      <div className="flex items-center justify-between mb-4 mx-4">
         <h3 className="text-lg font-semibold text-foreground">Attention Trend</h3>
         <span className="text-xs text-muted-foreground">Last 60 seconds</span>
       </div>
 
-      <div className="h-32">
+      <div className="h-64 mx-4">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data}>
+          {/* Use internal margins to provide spacing for axis/ticks while allowing the chart to occupy the full box height */}
+          <LineChart data={data} margin={{ left: 0, right: 8, top: 8, bottom: 5 }}>
             <XAxis 
               dataKey="time" 
               axisLine={false}
               tickLine={false}
               tick={{ fontSize: 10, fill: '#94A3B8' }}
               tickFormatter={(value) => `${value}s`}
+              tickMargin={2}
             />
             <YAxis 
               domain={[0, 100]}
               axisLine={false}
               tickLine={false}
               tick={{ fontSize: 10, fill: '#94A3B8' }}
+              width={35}
             />
             <Tooltip content={<CustomTooltip />} />
             <Line 
@@ -79,7 +82,7 @@ const TrendChart = ({ data, className = '' }: TrendChartProps) => {
         </ResponsiveContainer>
       </div>
 
-      <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
+      <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground mx-4">
         <span>Real-time monitoring</span>
         <div className="flex items-center space-x-1">
           <div className="w-2 h-2 bg-secondary rounded-full animate-pulse" />

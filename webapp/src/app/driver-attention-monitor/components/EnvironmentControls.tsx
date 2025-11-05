@@ -12,7 +12,7 @@ interface EnvironmentSetting {
 }
 
 interface EnvironmentControlsProps {
-  onSettingsChange: (settings: Record<string, boolean>) => void;
+  onSettingsChange: (settings: Record<string, any>) => void;
   className?: string;
 }
 
@@ -55,9 +55,25 @@ const EnvironmentControls = ({ onSettingsChange, className = '' }: EnvironmentCo
       enabled: false
     }
   ]);
+  const [speed, setSpeed] = useState<number>(45);
+  const [steeringAngle, setSteeringAngle] = useState<number>(0);
+  const [laneDeviation, setLaneDeviation] = useState<number>(0);
 
   useEffect(() => {
     setIsHydrated(true);
+  }, []);
+
+  // On mount, report initial settings (so parent has initial speed + toggles)
+  useEffect(() => {
+    const settingsMap = settings.reduce((acc, setting) => {
+      acc[setting.id] = setting.enabled;
+      return acc;
+    }, {} as Record<string, any>);
+    settingsMap['speed'] = speed;
+    settingsMap['steeringAngle'] = steeringAngle;
+    settingsMap['laneDeviation'] = laneDeviation;
+    onSettingsChange(settingsMap);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const toggleSetting = (id: string) => {
@@ -71,11 +87,53 @@ const EnvironmentControls = ({ onSettingsChange, className = '' }: EnvironmentCo
       const settingsMap = updated.reduce((acc, setting) => {
         acc[setting.id] = setting.enabled;
         return acc;
-      }, {} as Record<string, boolean>);
-      
+      }, {} as Record<string, any>);
+
+      // include numeric controls like speed
+      settingsMap['speed'] = speed;
+      settingsMap['steeringAngle'] = steeringAngle;
+      settingsMap['laneDeviation'] = laneDeviation;
+
       onSettingsChange(settingsMap);
       return updated;
     });
+  };
+
+  // handle speed slider change
+  const handleSpeedChange = (v: number) => {
+    setSpeed(v);
+    const settingsMap = settings.reduce((acc, setting) => {
+      acc[setting.id] = setting.enabled;
+      return acc;
+    }, {} as Record<string, any>);
+    settingsMap['speed'] = v;
+    settingsMap['steeringAngle'] = steeringAngle;
+    settingsMap['laneDeviation'] = laneDeviation;
+    onSettingsChange(settingsMap);
+  };
+
+  const handleSteeringChange = (v: number) => {
+    setSteeringAngle(v);
+    const settingsMap = settings.reduce((acc, setting) => {
+      acc[setting.id] = setting.enabled;
+      return acc;
+    }, {} as Record<string, any>);
+    settingsMap['speed'] = speed;
+    settingsMap['steeringAngle'] = v;
+    settingsMap['laneDeviation'] = laneDeviation;
+    onSettingsChange(settingsMap);
+  };
+
+  const handleLaneDeviationChange = (v: number) => {
+    setLaneDeviation(v);
+    const settingsMap = settings.reduce((acc, setting) => {
+      acc[setting.id] = setting.enabled;
+      return acc;
+    }, {} as Record<string, any>);
+    settingsMap['speed'] = speed;
+    settingsMap['steeringAngle'] = steeringAngle;
+    settingsMap['laneDeviation'] = v;
+    onSettingsChange(settingsMap);
   };
 
   if (!isHydrated) {
@@ -91,12 +149,7 @@ const EnvironmentControls = ({ onSettingsChange, className = '' }: EnvironmentCo
   }
 
   return (
-    <div className={`bg-card rounded-lg border border-border p-4 ${className}`}>
-      <div className="flex items-center space-x-2 mb-4">
-        <Icon name="Cog6ToothIcon" size={20} className="text-secondary" />
-        <h3 className="text-lg font-semibold text-foreground">Environment Simulation</h3>
-      </div>
-
+    <div className={`${className}`}>
       <div className="space-y-3">
         {settings.map((setting) => (
           <div key={setting.id} className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted/50 transition-micro">
@@ -130,14 +183,120 @@ const EnvironmentControls = ({ onSettingsChange, className = '' }: EnvironmentCo
         ))}
       </div>
 
+      {/* Sliders - Each in its own row with better styling */}
+      <div className="mt-4 space-y-4">
+        <div className="p-3 bg-card/50 rounded-lg border border-border">
+          <div className="flex justify-between items-center mb-2">
+            <label className="text-sm font-medium text-foreground">Speed</label>
+            <span className={`text-lg font-bold ${speed > 100 ? 'text-red-500' : speed > 60 ? 'text-yellow-500' : 'text-green-500'}`}>
+              {speed} km/h
+            </span>
+          </div>
+          <input
+            type="range"
+            min={0}
+            max={140}
+            value={speed}
+            onChange={(e) => handleSpeedChange(Number(e.target.value))}
+            className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-secondary"
+          />
+          <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
+            <span>0</span>
+            <span>70</span>
+            <span>140</span>
+          </div>
+        </div>
+
+        <div className="p-3 bg-card/50 rounded-lg border border-border">
+          <div className="flex justify-between items-center mb-2">
+            <label className="text-sm font-medium text-foreground">Steering Angle</label>
+            <span className={`text-lg font-bold ${Math.abs(steeringAngle) > 30 ? 'text-red-500' : Math.abs(steeringAngle) > 15 ? 'text-yellow-500' : 'text-green-500'}`}>
+              {steeringAngle > 0 ? '+' : ''}{steeringAngle}°
+            </span>
+          </div>
+          <input
+            type="range"
+            min={-45}
+            max={45}
+            value={steeringAngle}
+            onChange={(e) => handleSteeringChange(Number(e.target.value))}
+            className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-secondary"
+          />
+          <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
+            <span>← 45°</span>
+            <span>0°</span>
+            <span>45° →</span>
+          </div>
+        </div>
+
+        <div className="p-3 bg-card/50 rounded-lg border border-border">
+          <div className="flex justify-between items-center mb-2">
+            <label className="text-sm font-medium text-foreground">Lane Deviation</label>
+            <span className={`text-lg font-bold ${Math.abs(laneDeviation) > 1.5 ? 'text-red-500' : Math.abs(laneDeviation) > 0.8 ? 'text-yellow-500' : 'text-green-500'}`}>
+              {laneDeviation > 0 ? '+' : ''}{laneDeviation.toFixed(1)}m
+            </span>
+          </div>
+          <input
+            type="range"
+            min={-2}
+            max={2}
+            step={0.1}
+            value={laneDeviation}
+            onChange={(e) => handleLaneDeviationChange(Number(e.target.value))}
+            className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-secondary"
+          />
+          <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
+            <span>← 2m</span>
+            <span>Center</span>
+            <span>2m →</span>
+          </div>
+        </div>
+      </div>
+
       <div className="mt-4 p-3 bg-muted/30 rounded-lg">
         <div className="flex items-center space-x-2 mb-1">
           <Icon name="InformationCircleIcon" size={16} className="text-secondary" />
           <span className="text-xs font-medium text-foreground">Simulation Mode</span>
         </div>
-        <p className="text-xs text-muted-foreground">
+        <p className="text-xs text-muted-foreground mb-3">
           These controls simulate various driving conditions for testing attention monitoring accuracy.
         </p>
+        
+        {/* Status Summary - Compact */}
+        <div className="grid grid-cols-2 gap-2">
+          <div className="bg-card/50 p-2 rounded border border-border text-center">
+            <div className="text-[10px] text-muted-foreground">Active Tests</div>
+            <div className="text-base font-bold text-foreground">
+              {settings.filter(s => s.enabled).length}/{settings.length}
+            </div>
+          </div>
+          <div className="bg-card/50 p-2 rounded border border-border text-center">
+            <div className="text-[10px] text-muted-foreground">Risk Level</div>
+            <div className={`text-base font-bold ${
+              settings.filter(s => s.enabled).length > 2 ? 'text-red-500' : 
+              settings.filter(s => s.enabled).length > 0 ? 'text-yellow-500' : 
+              'text-green-500'
+            }`}>
+              {settings.filter(s => s.enabled).length > 2 ? 'High' : 
+               settings.filter(s => s.enabled).length > 0 ? 'Med' : 
+               'Low'}
+            </div>
+          </div>
+        </div>
+        
+        {/* Active Settings List */}
+        {settings.filter(s => s.enabled).length > 0 && (
+          <div className="mt-3 p-2 bg-secondary/10 rounded border border-secondary/30">
+            <div className="text-[10px] text-secondary font-semibold mb-1">Active:</div>
+            <div className="flex flex-wrap gap-1">
+              {settings.filter(s => s.enabled).map(s => (
+                <span key={s.id} className="text-[9px] px-2 py-0.5 bg-secondary/20 text-secondary rounded-full whitespace-nowrap">
+                  {s.label}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

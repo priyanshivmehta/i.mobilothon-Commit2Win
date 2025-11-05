@@ -34,47 +34,45 @@ const RiskFactors = ({ factors, className = '' }: RiskFactorsProps) => {
   };
 
   return (
-    <div className={`bg-card rounded-lg border border-border p-4 ${className}`}>
-      <div className="flex items-center space-x-2 mb-4">
-        <Icon name="ChartBarIcon" size={20} className="text-secondary" />
-        <h3 className="text-lg font-semibold text-foreground">Risk Factors</h3>
-      </div>
-
-      <div className="space-y-3">
-        {factors.slice(0, 3).map((factor, index) => (
-          <div key={factor.id} className="flex items-center justify-between">
-            <div className="flex items-center space-x-3 flex-1">
-              <div className="flex items-center justify-center w-6 h-6 rounded-full bg-muted text-xs font-medium text-muted-foreground">
-                {index + 1}
+    <div className={`${className}`}>
+      <div className="space-y-2">
+        {factors.slice(0, 4).map((factor) => (
+          <div key={factor.id} className={`p-3 rounded-lg border transition-all ${getSeverityColor(factor.severity)}`}>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center space-x-2">
+                <Icon 
+                  name={getSeverityIcon(factor.severity)} 
+                  size={16} 
+                  className={factor.severity === 'high' ? 'text-error' : factor.severity === 'medium' ? 'text-warning' : 'text-success'}
+                />
+                <span className="text-sm font-semibold text-foreground">{factor.label}</span>
               </div>
-              
-              <div className="flex-1">
-                <div className="flex items-center space-x-2 mb-1">
-                  <span className="text-sm font-medium text-foreground">{factor.label}</span>
-                  <Icon 
-                    name={getSeverityIcon(factor.severity)} 
-                    size={14} 
-                    className={factor.severity === 'high' ? 'text-error' : factor.severity === 'medium' ? 'text-warning' : 'text-success'}
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground">{factor.description}</p>
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <div className={`px-2 py-1 rounded-md border text-xs font-medium ${getSeverityColor(factor.severity)}`}>
+              <span className={`text-lg font-bold ${factor.severity === 'high' ? 'text-error' : factor.severity === 'medium' ? 'text-warning' : 'text-success'}`}>
                 {factor.impact}%
-              </div>
+              </span>
             </div>
+            
+            {/* Progress bar */}
+            <div className="w-full bg-muted/30 rounded-full h-2 mb-2">
+              <div 
+                className={`h-2 rounded-full transition-all duration-500 ${
+                  factor.severity === 'high' ? 'bg-error' : 
+                  factor.severity === 'medium' ? 'bg-warning' : 'bg-success'
+                }`}
+                style={{ width: `${Math.min(100, factor.impact)}%` }}
+              />
+            </div>
+            
+            <p className="text-xs text-muted-foreground">{factor.description}</p>
           </div>
         ))}
       </div>
 
       {factors.length === 0 && (
-        <div className="text-center py-8">
-          <Icon name="CheckCircleIcon" size={48} className="text-success mx-auto mb-2" />
-          <p className="text-sm text-muted-foreground">No significant risk factors detected</p>
-          <p className="text-xs text-muted-foreground mt-1">Attention levels are optimal</p>
+        <div className="text-center py-6">
+          <Icon name="CheckCircleIcon" size={40} className="text-success mx-auto mb-2" />
+          <p className="text-sm text-muted-foreground font-medium">All Clear</p>
+          <p className="text-xs text-muted-foreground mt-1">No risk factors detected</p>
         </div>
       )}
     </div>

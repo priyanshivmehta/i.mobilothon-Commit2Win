@@ -16,9 +16,23 @@ interface AlertSystemProps {
   currentScore: number;
   speed: number;
   className?: string;
+  // New structured inputs from backend
+  inference?: any;
+  fusion?: any;
+  audioMode?: 'beep' | 'voice' | 'off';
+  onAudioModeChange?: (mode: 'beep' | 'voice' | 'off') => void;
 }
 
-const AlertSystem = ({ currentScore, speed, className = '' }: AlertSystemProps) => {
+const normalizeScore = (v: any) => {
+  if (typeof v === 'number') return Math.round(Math.max(0, Math.min(100, v)));
+  if (typeof v === 'string') {
+    const n = parseFloat(v);
+    if (!Number.isNaN(n)) return Math.round(Math.max(0, Math.min(100, n)));
+  }
+  return 0;
+};
+
+const AlertSystem = ({ currentScore, speed, className = '', inference, fusion, audioMode = 'voice', onAudioModeChange }: AlertSystemProps) => {
   const [isHydrated, setIsHydrated] = useState(false);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [showAlert, setShowAlert] = useState(false);
@@ -30,11 +44,99 @@ const AlertSystem = ({ currentScore, speed, className = '' }: AlertSystemProps) 
   useEffect(() => {
     if (!isHydrated) return;
 
-    // Context-gated alert system
+    // Priority 1: fusion-driven alert (explicit level or very low alertness)
+    try {
+      if (fusion) {
+        const level = fusion.alert_level || fusion.level || null;
+        const score = normalizeScore(fusion.alertness_score ?? fusion.score);
+        const recommendation = fusion.recommendation || fusion.recommendations || null;
+
+        if (level === 'critical' || score < 20) {
+          const newAlert: Alert = {
+            id: `fusion-alert-${Date.now()}`,
+            type: 'voice',
+            severity: 'high',
+            message: recommendation || 'Critical alert: attention severely reduced',
+            timestamp: new Date(),
+            speed
+          };
+          setAlerts(prev => [newAlert, ...prev.slice(0, 4)]);
+          setShowAlert(true);
+          const timer = setTimeout(() => setShowAlert(false), 5000);
+          return () => clearTimeout(timer);
+        }
+      }
+    } catch (e) {
+      // ignore fusion parsing errors and fall through
+    }
+
+    // Priority 2: inference-driven alerts (drowsiness/distraction/voice cues)
+    try {
+      if (inference) {
+        const d = inference.drowsiness;
+        const dis = inference.distraction;
+        const v = inference.voice;
+
+        // Drowsiness: confidence-based
+        if (d && typeof d.confidence === 'number' && d.confidence > 0.6) {
+          const sev: Alert['severity'] = d.confidence > 0.85 ? 'high' : d.confidence > 0.7 ? 'medium' : 'low';
+          const newAlert: Alert = {
+            id: `drowsy-${Date.now()}`,
+            type: 'visual',
+            severity: sev,
+            message: d.label || 'Drowsiness detected',
+            timestamp: new Date(),
+            speed
+          };
+          setAlerts(prev => [newAlert, ...prev.slice(0, 4)]);
+          setShowAlert(true);
+          const timer = setTimeout(() => setShowAlert(false), 4000);
+          return () => clearTimeout(timer);
+        }
+
+        // Distraction
+        if (dis && typeof dis.confidence === 'number' && dis.confidence > 0.6) {
+          const sev: Alert['severity'] = dis.confidence > 0.85 ? 'high' : dis.confidence > 0.7 ? 'medium' : 'low';
+          const newAlert: Alert = {
+            id: `distr-${Date.now()}`,
+            type: 'visual',
+            severity: sev,
+            message: dis.label || 'Distraction detected',
+            timestamp: new Date(),
+            speed
+          };
+          setAlerts(prev => [newAlert, ...prev.slice(0, 4)]);
+          setShowAlert(true);
+          const timer = setTimeout(() => setShowAlert(false), 4000);
+          return () => clearTimeout(timer);
+        }
+
+        // Voice cues (e.g., heavy breathing, yawns) -> voice alerts
+        if (v && typeof v.confidence === 'number' && v.confidence > 0.6) {
+          const sev: Alert['severity'] = v.confidence > 0.85 ? 'high' : v.confidence > 0.7 ? 'medium' : 'low';
+          const newAlert: Alert = {
+            id: `voice-${Date.now()}`,
+            type: 'voice',
+            severity: sev,
+            message: v.label || 'Vocal fatigue cues detected',
+            timestamp: new Date(),
+            speed
+          };
+          setAlerts(prev => [newAlert, ...prev.slice(0, 4)]);
+          setShowAlert(true);
+          const timer = setTimeout(() => setShowAlert(false), 4000);
+          return () => clearTimeout(timer);
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+
+    // Fallback: threshold-based alert using currentScore
     if (currentScore < 40) {
       const alertType = speed > 50 ? 'visual' : 'voice';
       const severity = currentScore < 20 ? 'high' : currentScore < 30 ? 'medium' : 'low';
-      
+
       const newAlert: Alert = {
         id: `alert-${Date.now()}`,
         type: alertType,
@@ -50,7 +152,7 @@ const AlertSystem = ({ currentScore, speed, className = '' }: AlertSystemProps) 
       const timer = setTimeout(() => setShowAlert(false), 3000);
       return () => clearTimeout(timer);
     }
-  }, [currentScore, speed, isHydrated]);
+  }, [currentScore, speed, isHydrated, inference, fusion]);
 
   const getAlertMessage = (severity: string, type: string): string => {
     const messages = {
@@ -98,11 +200,9 @@ const AlertSystem = ({ currentScore, speed, className = '' }: AlertSystemProps) 
   }
 
   return (
-    <div className={`bg-card rounded-lg border border-border p-4 ${className}`}>
-      <div className="flex items-center space-x-2 mb-4">
-        <Icon name="BellIcon" size={20} className="text-secondary" />
-        <h3 className="text-lg font-semibold text-foreground">Alert System</h3>
-        <div className="flex items-center space-x-1 ml-auto">
+    <div className={`${className}`}>
+      <div className="flex items-center justify-end mb-4">
+        <div className="flex items-center space-x-1">
           <div className={`w-2 h-2 rounded-full ${currentScore < 40 ? 'bg-error animate-pulse' : 'bg-success'}`} />
           <span className="text-xs text-muted-foreground">
             {currentScore < 40 ? 'Active' : 'Monitoring'}
@@ -110,15 +210,31 @@ const AlertSystem = ({ currentScore, speed, className = '' }: AlertSystemProps) 
         </div>
       </div>
 
+      {/* Audio Mode Selector */}
+      {onAudioModeChange && (
+        <div className="mb-4 p-3 bg-muted/30 rounded-lg">
+          <label className="text-xs font-medium text-foreground block mb-2">Audio Alert Mode</label>
+          <select 
+            value={audioMode} 
+            onChange={(e) => onAudioModeChange(e.target.value as any)} 
+            className="w-full bg-card border border-border text-sm text-foreground rounded px-3 py-2"
+          >
+            <option value="beep">🔔 Beep Sound Only</option>
+            <option value="voice">🗣️ Voice Alert Only</option>
+            <option value="off">🔇 Silent (No Audio)</option>
+          </select>
+        </div>
+      )}
+
       {/* Active Alert Banner */}
       {showAlert && alerts.length > 0 && (
-        <div className={`mb-4 p-3 rounded-lg border-2 ${getSeverityColor(alerts[0].severity)} animate-pulse`}>
-          <div className="flex items-center space-x-2">
-            <Icon name={getSeverityIcon(alerts[0].severity) as any} size={20} />
-            <div className="flex-1">
-              <div className="font-medium text-sm">{alerts[0].message}</div>
-              <div className="text-xs opacity-80">
-                Speed: {alerts[0].speed} mph | {alerts[0].type === 'visual' ? 'Visual Alert' : 'Voice Alert'}
+        <div className={`mb-4 p-3 rounded-lg border-2 ${getSeverityColor(alerts[0].severity)} animate-pulse relative`}>
+          <div className="flex items-start gap-2">
+            <Icon name={getSeverityIcon(alerts[0].severity) as any} size={20} className="flex-shrink-0 mt-0.5" />
+            <div className="flex-1 overflow-hidden">
+              <div className="font-medium text-sm leading-tight mb-1">{alerts[0].message}</div>
+              <div className="text-xs opacity-80 leading-tight">
+                Speed: {alerts[0].speed} mph | {alerts[0].type === 'visual' ? 'Visual' : 'Voice'}
               </div>
             </div>
           </div>
@@ -129,16 +245,16 @@ const AlertSystem = ({ currentScore, speed, className = '' }: AlertSystemProps) 
       <div className="space-y-2 max-h-32 overflow-y-auto">
         {alerts.length > 0 ? (
           alerts.map((alert) => (
-            <div key={alert.id} className="flex items-center justify-between p-2 bg-muted/30 rounded-md">
-              <div className="flex items-center space-x-2">
-                <Icon 
-                  name={alert.type === 'visual' ? 'EyeIcon' : 'SpeakerWaveIcon'} 
-                  size={14} 
-                  className="text-muted-foreground"
-                />
-                <span className="text-xs text-foreground">{alert.message}</span>
+            <div key={alert.id} className="flex items-start gap-2 p-2 bg-muted/30 rounded-md">
+              <Icon 
+                name={alert.type === 'visual' ? 'EyeIcon' : 'SpeakerWaveIcon'} 
+                size={14} 
+                className="text-muted-foreground flex-shrink-0 mt-0.5"
+              />
+              <div className="flex-1 overflow-hidden">
+                <span className="text-xs text-foreground block leading-tight">{alert.message}</span>
               </div>
-              <span className="text-xs text-muted-foreground">
+              <span className="text-xs text-muted-foreground flex-shrink-0 ml-2">
                 {alert.timestamp.toLocaleTimeString('en-US', { 
                   hour12: false,
                   hour: '2-digit',
