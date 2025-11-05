@@ -142,24 +142,101 @@ class DriverWellnessAI:
         results['preprocessing']['pose'] = pose_result
         
         # ===== AI INFERENCE LAYER =====
-        
+        # Log debug info for terminal and include in results.debug
+        try:
+            feats = face_result.get('features', {}) if isinstance(face_result, dict) else {}
+            avg_ear = float(feats.get('avg_ear', 0.0)) if feats else 0.0
+            mar = float(feats.get('mar', 0.0)) if feats else 0.0
+            face_rect = feats.get('face_rect') if feats else None
+        except Exception:
+            avg_ear = 0.0
+            mar = 0.0
+            face_rect = None
+
+        pose_debug = None
+        try:
+            hp = pose_result.get('head_pose') if isinstance(pose_result, dict) else None
+            if hp:
+                pose_debug = {'yaw': getattr(hp, 'yaw', None), 'pitch': getattr(hp, 'pitch', None), 'roll': getattr(hp, 'roll', None)}
+        except Exception:
+            pose_debug = None
+
+        # Expose a debug block so frontend can read raw metrics and terminal prints
+        results['debug'] = {
+            'avg_ear': avg_ear,
+            'mar': mar,
+            'face_rect': face_rect,
+            'pose': pose_debug,
+            'face_detected': bool(face_result.get('face_detected'))
+        }
+
+        # Print detailed metrics to terminal for debugging
+        try:
+            print(f"[DEBUG] EAR={avg_ear:.3f} MAR={mar:.3f} face_detected={face_result.get('face_detected')} face_rect={face_rect} pose={pose_debug}")
+        except Exception:
+            pass
+
         # 1. Drowsiness Detection
         drowsiness_result = None
-        if face_result['face_detected'] and 'left_eye' in face_result.get('features', {}):
-            # Using feature-based approach (more reliable without training)
-            features = face_result['features']
+        face_detected = bool(face_result.get('face_detected'))
+        features = face_result.get('features', {}) if isinstance(face_result, dict) else {}
+
+        # If no face is seen at all (e.g., hand covers camera), mark alertness = 0 by forcing max-risk
+        if not face_detected:
+            drowsiness_result = {
+                'drowsiness_score': 1.0,  # max risk
+                'is_drowsy': True,
+                'confidence': 0.0,
+                'note': 'no_face_visible'
+            }
+            # also mark distraction and voice as high risk below to ensure alertness goes to 0
+            distraction_result = {
+                'distraction_score': 1.0,
+                'is_distracted': True,
+                'confidence': 0.0,
+                'class_name': 'unknown'
+            }
+            voice_result = {
+                'voice_fatigue_score': 1.0,
+                'is_yawning': True,
+                'is_fatigued': True
+            }
+            results['inference']['drowsiness'] = drowsiness_result
+            results['inference']['distraction'] = distraction_result
+            results['inference']['voice'] = voice_result
+            results['debug']['observation_quality'] = 'none'
+            # Fuse immediately with max-risk signals
+            fusion_result = self.signal_fusion.process_signals(
+                drowsiness_result=drowsiness_result,
+                distraction_result=distraction_result,
+                voice_result=voice_result
+            )
+            results['fusion'] = fusion_result
+            return results
+
+        # If face detected but eye landmarks are missing, fall back to pose-based heuristics
+        if face_detected and 'left_eye' not in features:
+            # Use head-pose pitch to estimate nodding/drowsiness
+            hp = pose_result.get('head_pose') if isinstance(pose_result, dict) else None
+            pose_based_score = 0.0
+            if hp:
+                # pitch: positive when looking down; scale to [0,1] using 30 degrees as strong nod
+                try:
+                    pitch_val = abs(getattr(hp, 'pitch', 0.0))
+                    pose_based_score = min(1.0, pitch_val / 30.0)
+                except Exception:
+                    pose_based_score = 0.0
+
             drowsiness_result = self.drowsiness_detector.predict_from_features(
                 ear=features.get('avg_ear', 0.3),
                 mar=features.get('mar', 0.3),
-                blink_rate=12  # Default blink rate
-            )
-        else:
-            # Default safe values
-            drowsiness_result = {
-                'drowsiness_score': 0.0,
-                'is_drowsy': False,
-                'confidence': 0.0
-            }
+                blink_rate=12
+            ) if hasattr(self.drowsiness_detector, 'predict_from_features') else {'drowsiness_score': pose_based_score, 'is_drowsy': pose_based_score > 0.5, 'confidence': 0.5}
+            # Blend pose-based into drowsiness when eye features are missing
+            if isinstance(drowsiness_result, dict):
+                drowsiness_result['drowsiness_score'] = float(min(1.0, 0.6 * drowsiness_result.get('drowsiness_score', 0.0) + 0.4 * pose_based_score))
+                drowsiness_result['note'] = 'partial_face_pose_fallback'
+
         
         results['inference']['drowsiness'] = drowsiness_result
         

@@ -4,7 +4,7 @@
 opencv-python>=4.8.0
 opencv-contrib-python>=4.8.0
 mediapipe>=0.10.0
-dlib>=19.24.0
+# dlib>=19.24.0  # commented out: building dlib on Windows requires MSVC/CMake; using MediaPipe as alternative
 
 # Deep Learning Frameworks
 tensorflow>=2.13.0
@@ -36,3 +36,7 @@ mtcnn>=0.1.1
 # Utility
 pillow>=10.0.0
 tqdm>=4.65.0
+
+# Web server for integrations
+Flask>=2.2.0
+flask-cors>=3.0.10

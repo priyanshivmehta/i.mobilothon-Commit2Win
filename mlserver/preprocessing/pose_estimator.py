@@ -25,9 +25,10 @@ class PoseEstimator:
     def __init__(self):
         # Initialize MediaPipe Face Mesh
         self.mp_face_mesh = mp.solutions.face_mesh
+        # Avoid refine_landmarks=True to prevent projection issues when ROI isn't square
         self.face_mesh = self.mp_face_mesh.FaceMesh(
             max_num_faces=1,
-            refine_landmarks=True,
+            refine_landmarks=False,
             min_detection_confidence=0.5,
             min_tracking_confidence=0.5
         )
@@ -153,13 +154,16 @@ class PoseEstimator:
             'landmarks': None
         }
         
-        # Convert to RGB for MediaPipe
-        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        results = self.face_mesh.process(rgb_frame)
-        
-        if not results.multi_face_landmarks:
+        # Convert to RGB for MediaPipe and defensively handle processing errors
+        try:
+            rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            results = self.face_mesh.process(rgb_frame)
+        except Exception:
             return result
-        
+
+        if not results or not results.multi_face_landmarks:
+            return result
+
         face_landmarks = results.multi_face_landmarks[0]
         result['face_detected'] = True
         result['landmarks'] = face_landmarks
