@@ -66,16 +66,36 @@ export async function updateSession(request: NextRequest) {
     console.error('Auth check failed:', error)
   }
 
+  // Public paths that don't require authentication
+  const publicPaths = ['/', '/landing']
+  const isAuthPath = path.startsWith('/auth/')
+  const isPrivacySetup = path.startsWith('/privacy-consent-setup')
+
   // Redirect logic based on authentication and role
-  if (!user && !path.startsWith('/auth') && path !== '/') {
-    // Redirect to signin if not authenticated
+  if (!user) {
+    // Allow public paths and auth pages
+    if (publicPaths.includes(path) || isAuthPath) {
+      return supabaseResponse
+    }
+
+    // Redirect to role-specific auth based on attempted page access
     const url = request.nextUrl.clone()
-    url.pathname = '/auth/signin'
+    if (path.startsWith('/fleet-management-console')) {
+      url.pathname = '/auth/fleet/signin'
+    } else if (path.startsWith('/driver-attention-monitor')) {
+      url.pathname = '/auth/driver/signin'
+    } else if (isPrivacySetup) {
+      // Redirect to landing if trying to access privacy setup without auth
+      url.pathname = '/landing'
+    } else {
+      // Default to landing page for other protected pages
+      url.pathname = '/landing'
+    }
     return NextResponse.redirect(url)
   }
 
-  if (user && path.startsWith('/auth')) {
-    // Redirect authenticated users away from auth pages
+  if (user && isAuthPath) {
+    // Redirect authenticated users away from auth pages directly to their dashboard
     const url = request.nextUrl.clone()
     if (userProfile?.role === 'EMPLOYEE') {
       url.pathname = '/fleet-management-console'

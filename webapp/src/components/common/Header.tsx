@@ -115,7 +115,7 @@ const Header = ({ className = '', userRole = null }: HeaderProps) => {
         <div className="flex items-center justify-between h-16 px-6">
           {/* Logo Section */}
           <div className="flex items-center space-x-8">
-            <Link href="/" className="flex items-center space-x-3 transition-micro hover:opacity-80">
+            <Link href="/landing" className="flex items-center space-x-3 transition-micro hover:opacity-80">
               <div className="w-8 h-8 bg-secondary rounded-sm flex items-center justify-center">
                 <span className="text-secondary-foreground font-semibold text-sm">VW</span>
               </div>
