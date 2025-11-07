@@ -2,8 +2,10 @@
 
  import React, { useState, useEffect, useRef } from 'react';
  import { MapContainer, TileLayer, Marker, Polyline, Popup } from 'react-leaflet';
+ import L from 'leaflet';
  import 'leaflet/dist/leaflet.css';
  import Icon from '@/components/ui/AppIcon';
+ import LogoutButton from '@/components/common/LogoutButton';
  import CameraFeed from './CameraFeed';
  import AttentionGauge from './AttentionGauge';
  import EnvironmentControls from './EnvironmentControls';
@@ -45,6 +47,14 @@
 
    useEffect(() => {
      setHydrated(true);
+     
+     // Fix Leaflet marker icons
+     delete (L.Icon.Default.prototype as any)._getIconUrl;
+     L.Icon.Default.mergeOptions({
+       iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+       iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+       shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+     });
    }, []);
 
    // Simulation / fusion-friendly loop: applies immediate penalties based on sudden deltas
@@ -448,7 +458,10 @@
    return (
      <div className="min-h-screen bg-[#0b1320] pt-16">
        <div className="container mx-auto px-6 py-6">
-         <h1 className="text-3xl text-white font-semibold mb-2">Driver Attention Monitor</h1>
+         <div className="flex items-center justify-between mb-2">
+           <h1 className="text-3xl text-white font-semibold">Driver Attention Monitor</h1>
+           <LogoutButton className="text-sm px-4 py-2" />
+         </div>
          <p className="text-gray-400 text-sm mb-6">Real-time fatigue & microsleep monitoring</p>
 
          {/* Camera + Attention Row */}

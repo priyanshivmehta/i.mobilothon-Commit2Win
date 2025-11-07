@@ -1,7 +1,30 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import dynamic from 'next/dynamic';
 import Icon from '@/components/ui/AppIcon';
+
+// Dynamic import to avoid SSR issues
+const MapContainer = dynamic(
+  () => import('react-leaflet').then((mod) => mod.MapContainer),
+  { ssr: false }
+);
+const TileLayer = dynamic(
+  () => import('react-leaflet').then((mod) => mod.TileLayer),
+  { ssr: false }
+);
+const Marker = dynamic(
+  () => import('react-leaflet').then((mod) => mod.Marker),
+  { ssr: false }
+);
+const Popup = dynamic(
+  () => import('react-leaflet').then((mod) => mod.Popup),
+  { ssr: false }
+);
+const Polyline = dynamic(
+  () => import('react-leaflet').then((mod) => mod.Polyline),
+  { ssr: false }
+);
 
 interface Driver {
   id: string;
@@ -25,10 +48,21 @@ interface FleetMapProps {
 const FleetMap = ({ drivers, onDriverSelect }: FleetMapProps) => {
   const [selectedDriver, setSelectedDriver] = useState<Driver | null>(null);
   const [isHydrated, setIsHydrated] = useState(false);
-  const mapRef = useRef<HTMLDivElement>(null);
+  const [L, setL] = useState<any>(null);
 
   useEffect(() => {
     setIsHydrated(true);
+    
+    // Fix Leaflet marker icons
+    import('leaflet').then((leaflet) => {
+      setL(leaflet.default);
+      delete (leaflet.default.Icon.Default.prototype as any)._getIconUrl;
+      leaflet.default.Icon.Default.mergeOptions({
+        iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+        iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+        shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+      });
+    });
   }, []);
 
   const getRiskColor = (riskLevel: string) => {
@@ -60,6 +94,36 @@ const FleetMap = ({ drivers, onDriverSelect }: FleetMapProps) => {
 
   const closePopover = () => {
     setSelectedDriver(null);
+  };
+
+  // Create custom colored markers for different risk levels
+  const createCustomIcon = (riskLevel: string) => {
+    if (!L) return null;
+    
+    const color = riskLevel === 'high' ? '#ef4444' : riskLevel === 'medium' ? '#f59e0b' : '#22c55e';
+    
+    return L.divIcon({
+      className: 'custom-marker',
+      html: `
+        <div style="
+          width: 32px;
+          height: 32px;
+          background-color: ${color};
+          border: 3px solid white;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        ">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="white" viewBox="0 0 24 24" width="16" height="16">
+            <path d="M3.5 20.5v-17h17v17H3.5zM2 22h20V2H2v20zm2-2h16V4H4v16zm7-9h2v6h-2v-6zm0-4h2v2h-2V7z"/>
+          </svg>
+        </div>
+      `,
+      iconSize: [32, 32],
+      iconAnchor: [16, 16],
+    });
   };
 
   if (!isHydrated) {
@@ -95,115 +159,44 @@ const FleetMap = ({ drivers, onDriverSelect }: FleetMapProps) => {
         </div>
       </div>
       
-      <div className="relative h-96 bg-slate-800" ref={mapRef}>
-        {/* Mock Map Background */}
-        <iframe
-          width="100%"
-          height="100%"
-          loading="lazy"
-          title="Fleet Management Map"
-          referrerPolicy="no-referrer-when-downgrade"
-          src="https://www.google.com/maps?q=40.7128,-74.0060&z=12&output=embed"
-          className="absolute inset-0"
-        />
-        
-        {/* Driver Markers Overlay */}
-        <div className="absolute inset-0 pointer-events-none">
-          {drivers.map((driver, index) => (
-            <div
-              key={driver.id}
-              className="absolute pointer-events-auto cursor-pointer transform -translate-x-1/2 -translate-y-1/2"
-              style={{
-                left: `${20 + (index % 4) * 20}%`,
-                top: `${20 + Math.floor(index / 4) * 25}%`,
-              }}
-              onClick={() => handleDriverClick(driver)}
-            >
-              <div className={`
-                w-8 h-8 rounded-full border-2 ${getRiskColor(driver.riskLevel)} ${getRiskBorderColor(driver.riskLevel)}
-                flex items-center justify-center shadow-elevation-2 hover:scale-110 transition-component
-              `}>
-                <Icon name="TruckIcon" size={16} className="text-white" />
-              </div>
-              <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 bg-background/90 backdrop-blur-glass px-2 py-1 rounded text-xs font-medium text-foreground whitespace-nowrap">
-                {driver.name}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Driver Detail Popover */}
-        {selectedDriver && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="pointer-events-auto bg-card border border-border rounded-lg shadow-elevation-3 p-4 max-w-sm w-full mx-4">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-lg font-semibold text-foreground">
-                  {selectedDriver.name}
-                </h3>
-                <button
-                  onClick={closePopover}
-                  className="text-muted-foreground hover:text-foreground transition-micro"
-                >
-                  <Icon name="XMarkIcon" size={20} />
-                </button>
-              </div>
-              
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Vehicle ID:</span>
-                  <span className="text-sm font-medium text-foreground">
-                    {selectedDriver.vehicleId}
-                  </span>
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Attention Score:</span>
-                  <div className="flex items-center space-x-2">
-                    <span className="text-lg font-semibold text-foreground">
-                      {selectedDriver.attentionScore}
-                    </span>
-                    <div className={`w-2 h-2 rounded-full ${getRiskColor(selectedDriver.riskLevel)}`} />
+      <div className="relative h-96 bg-slate-800">
+        {isHydrated && L ? (
+          <MapContainer
+            center={[21.1702, 72.8311]} // Surat, Gujarat (SVNIT campus area)
+            zoom={13}
+            style={{ height: '100%', width: '100%' }}
+            className="z-0"
+          >
+            <TileLayer
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
+            
+            {/* Driver Markers */}
+            {drivers.map((driver) => (
+              <Marker
+                key={driver.id}
+                position={[driver.lat, driver.lng]}
+                icon={createCustomIcon(driver.riskLevel) as any}
+                eventHandlers={{
+                  click: () => handleDriverClick(driver),
+                }}
+              >
+                <Popup>
+                  <div className="p-2">
+                    <h3 className="font-semibold text-sm">{driver.name}</h3>
+                    <p className="text-xs text-gray-600">{driver.vehicleId}</p>
+                    <p className="text-xs mt-1">Score: <span className="font-medium">{driver.attentionScore}</span></p>
+                    <p className="text-xs">Speed: {driver.speed} km/h</p>
+                    <p className="text-xs">Route: {driver.route}</p>
                   </div>
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Speed:</span>
-                  <span className="text-sm font-medium text-foreground">
-                    {selectedDriver.speed} mph
-                  </span>
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Route:</span>
-                  <span className="text-sm font-medium text-foreground">
-                    {selectedDriver.route}
-                  </span>
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Last Alert:</span>
-                  <span className="text-sm font-medium text-foreground">
-                    {selectedDriver.lastAlert}
-                  </span>
-                </div>
-                
-                {/* Mini Sparkline */}
-                <div className="pt-2">
-                  <span className="text-xs text-muted-foreground mb-2 block">
-                    Attention Trend (Last 10 minutes)
-                  </span>
-                  <div className="flex items-end space-x-1 h-8">
-                    {selectedDriver.sparklineData.map((value, index) => (
-                      <div
-                        key={index}
-                        className="bg-secondary flex-1 rounded-sm"
-                        style={{ height: `${(value / 100) * 100}%` }}
-                      />
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
+                </Popup>
+              </Marker>
+            ))}
+          </MapContainer>
+        ) : (
+          <div className="flex items-center justify-center h-full bg-slate-700">
+            <div className="text-white text-sm">Loading map...</div>
           </div>
         )}
       </div>

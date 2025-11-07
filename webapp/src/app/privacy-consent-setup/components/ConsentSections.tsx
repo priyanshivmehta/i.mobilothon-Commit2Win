@@ -100,9 +100,9 @@ const ConsentSections = ({ consents, onConsentChange }: ConsentSectionsProps) =>
                 className={`
                   relative inline-flex h-6 w-11 items-center rounded-full transition-component
                   ${consents[item.id] ? 'bg-secondary' : 'bg-muted'}
-                  ${item.required && !consents[item.id] ? 'opacity-50' : ''}
+                  focus:outline-none focus:ring-2 focus:ring-secondary focus:ring-offset-2
                 `}
-                disabled={item.required && !consents[item.id]}
+                aria-label={`Toggle ${item.title}`}
               >
                 <span
                   className={`

@@ -2,11 +2,12 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import Icon from '@/components/ui/AppIcon';
 
 interface HeaderProps {
   className?: string;
+  userRole?: 'USER' | 'EMPLOYEE' | null;
 }
 
 interface NavigationItem {
@@ -29,8 +30,9 @@ interface PrivacyStatus {
   dataProcessing: boolean;
 }
 
-const Header = ({ className = '' }: HeaderProps) => {
+const Header = ({ className = '', userRole = null }: HeaderProps) => {
   const pathname = usePathname();
+  const router = useRouter();
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>({
     camera: true,
     websocket: true,
@@ -59,6 +61,11 @@ const Header = ({ className = '' }: HeaderProps) => {
       description: 'Comprehensive oversight dashboard'
     }
   ];
+
+  // Filter navigation items based on user role
+  const visibleNavigationItems = userRole === 'USER' 
+    ? navigationItems.filter(item => item.role === 'driver') 
+    : navigationItems; // EMPLOYEE sees both
 
   const getCurrentRole = (): 'driver' | 'fleet' | null => {
     if (pathname === '/driver-attention-monitor') return 'driver';
@@ -123,27 +130,32 @@ const Header = ({ className = '' }: HeaderProps) => {
             </Link>
           </div>
 
-          {/* Role Toggle Navigation */}
-          <div className="flex items-center space-x-1 bg-card rounded-lg p-1 border border-border">
-            {navigationItems.map((item) => (
-              <Link
-                key={item.id}
-                href={item.path}
-                className={`
-                  relative px-4 py-2 rounded-md text-sm font-medium transition-component
-                  ${currentRole === item.role
-                    ? 'bg-secondary text-secondary-foreground shadow-elevation-1'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-                  }
-                `}
-              >
-                {item.label}
-                {currentRole === item.role && (
-                  <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-secondary rounded-full" />
-                )}
-              </Link>
-            ))}
-          </div>
+          {/* Role Toggle Navigation - Only show if user has multiple options */}
+          {visibleNavigationItems.length > 1 && (
+            <div className="flex items-center space-x-1 bg-card rounded-lg p-1 border border-border">
+              {visibleNavigationItems.map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    // Force full page reload to stop camera and reset state
+                    window.location.href = item.path;
+                  }}
+                  className={`
+                    relative px-4 py-2 rounded-md text-sm font-medium transition-component cursor-pointer
+                    ${currentRole === item.role
+                      ? 'bg-secondary text-secondary-foreground shadow-elevation-1'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                    }
+                  `}
+                >
+                  {item.label}
+                  {currentRole === item.role && (
+                    <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-secondary rounded-full" />
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Status Indicators */}
           <div className="flex items-center space-x-4">

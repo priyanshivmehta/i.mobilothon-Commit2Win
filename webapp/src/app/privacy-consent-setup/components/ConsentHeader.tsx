@@ -1,5 +1,6 @@
 import React from 'react';
 import Icon from '@/components/ui/AppIcon';
+import LogoutButton from '@/components/common/LogoutButton';
 
 interface ConsentHeaderProps {
   onClose: () => void;
@@ -17,13 +18,16 @@ const ConsentHeader = ({ onClose }: ConsentHeaderProps) => {
           <p className="text-sm text-muted-foreground">Configure your data processing preferences</p>
         </div>
       </div>
-      <button
-        onClick={onClose}
-        className="p-2 rounded-lg hover:bg-muted/50 transition-micro text-muted-foreground hover:text-foreground"
-        aria-label="Close privacy setup"
-      >
-        <Icon name="XMarkIcon" size={20} />
-      </button>
+      <div className="flex items-center space-x-2">
+        <LogoutButton className="text-sm px-3 py-1.5" />
+        <button
+          onClick={onClose}
+          className="p-2 rounded-lg hover:bg-muted/50 transition-micro text-muted-foreground hover:text-foreground"
+          aria-label="Close privacy setup"
+        >
+          <Icon name="XMarkIcon" size={20} />
+        </button>
+      </div>
     </div>
   );
 };

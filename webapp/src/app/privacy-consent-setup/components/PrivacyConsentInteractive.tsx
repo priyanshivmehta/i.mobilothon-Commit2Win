@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
 import ConsentHeader from './ConsentHeader';
 import ProcessingExplanation from './ProcessingExplanation';
 import ConsentSections from './ConsentSections';
@@ -14,10 +15,12 @@ interface ConsentState {
   processing: boolean;
   analytics: boolean;
   alerts: boolean;
+  [key: string]: boolean;
 }
 
 const PrivacyConsentInteractive = () => {
   const router = useRouter();
+  const supabase = createClient();
   const [isHydrated, setIsHydrated] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [consents, setConsents] = useState<ConsentState>({
@@ -26,32 +29,62 @@ const PrivacyConsentInteractive = () => {
     analytics: true,
     alerts: true
   });
+  const [userId, setUserId] = useState<string | null>(null);
 
   const totalSteps = 4;
 
   useEffect(() => {
     setIsHydrated(true);
     
-    // Load saved consent preferences
-    const savedConsents = localStorage.getItem('vw-privacy-consents');
-    if (savedConsents) {
+    // Get current user and load consent preferences from database
+    const loadUserConsents = async () => {
       try {
-        const parsed = JSON.parse(savedConsents);
-        setConsents(prev => ({ ...prev, ...parsed }));
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (user) {
+          setUserId(user.id);
+          
+          // Load from database
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('camera_consent, processing_consent, analytics_consent')
+            .eq('id', user.id)
+            .single();
+          
+          if (profile) {
+            setConsents({
+              camera: profile.camera_consent || false,
+              processing: profile.processing_consent || false,
+              analytics: profile.analytics_consent !== false, // Default to true
+              alerts: true
+            });
+          }
+        }
       } catch (error) {
-        console.warn('Failed to parse saved consents:', error);
+        console.error('Error loading user consents:', error);
+        // Continue with default values
       }
-    }
-  }, []);
+    };
+    
+    loadUserConsents();
+  }, [supabase]);
 
   const handleConsentChange = (id: string, value: boolean) => {
     if (!isHydrated) return;
     
+    console.log(`Consent change: ${id} = ${value}`);
+    
     setConsents(prev => {
       const updated = { ...prev, [id]: value };
       
-      // Save to localStorage
-      localStorage.setItem('vw-privacy-consents', JSON.stringify(updated));
+      // Save to localStorage with error handling
+      try {
+        localStorage.setItem('vw-privacy-consents', JSON.stringify(updated));
+        console.log('Updated consents:', updated);
+      } catch (error) {
+        console.error('Failed to save to localStorage:', error);
+        // Continue anyway - we'll save to database on completion
+      }
       
       return updated;
     });
@@ -69,35 +102,119 @@ const PrivacyConsentInteractive = () => {
     }
   };
 
-  const handleComplete = () => {
-    if (!isHydrated) return;
+  const handleComplete = async () => {
+    if (!isHydrated || !userId) {
+      alert('Please wait for the page to fully load before completing setup.');
+      return;
+    }
     
-    // Save final consent state
-    localStorage.setItem('vw-privacy-consents', JSON.stringify(consents));
-    localStorage.setItem('vw-privacy-setup-completed', 'true');
-    localStorage.setItem('vw-privacy-setup-date', new Date().toISOString());
-    
-    // Navigate to driver monitor
-    router.push('/driver-attention-monitor');
+    try {
+      // Save consent state to database
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          camera_consent: consents.camera,
+          processing_consent: consents.processing,
+          analytics_consent: consents.analytics,
+        })
+        .eq('id', userId);
+      
+      if (error) {
+        console.error('Failed to save consents:', error);
+        alert('Failed to save consent preferences. Please try again.');
+        return;
+      }
+      
+      // Save to localStorage as backup (with error handling)
+      try {
+        localStorage.setItem('vw-privacy-consents', JSON.stringify(consents));
+        localStorage.setItem('vw-privacy-setup-completed', 'true');
+        localStorage.setItem('vw-privacy-setup-date', new Date().toISOString());
+      } catch (localError) {
+        console.error('localStorage error (non-critical):', localError);
+        // Continue anyway since database save succeeded
+      }
+      
+      // Get user role to determine redirect
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', userId)
+        .single();
+      
+      // Navigate based on role
+      if (profile?.role === 'EMPLOYEE') {
+        router.push('/fleet-management-console');
+      } else {
+        router.push('/driver-attention-monitor');
+      }
+      
+      router.refresh();
+    } catch (err: any) {
+      console.error('Complete error:', err);
+      alert('An error occurred. Please try again.');
+    }
   };
 
-  const handleSensorOnly = () => {
-    if (!isHydrated) return;
+  const handleSensorOnly = async () => {
+    if (!isHydrated || !userId) {
+      alert('Please wait for the page to fully load before completing setup.');
+      return;
+    }
     
-    // Set sensor-only mode
-    const sensorOnlyConsents = {
-      camera: false,
-      processing: false,
-      analytics: false,
-      alerts: true
-    };
-    
-    localStorage.setItem('vw-privacy-consents', JSON.stringify(sensorOnlyConsents));
-    localStorage.setItem('vw-privacy-setup-completed', 'true');
-    localStorage.setItem('vw-privacy-mode', 'sensor-only');
-    
-    // Navigate to driver monitor
-    router.push('/driver-attention-monitor');
+    try {
+      // Set sensor-only mode in database
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          camera_consent: false,
+          processing_consent: false,
+          analytics_consent: false,
+        })
+        .eq('id', userId);
+      
+      if (error) {
+        console.error('Failed to save sensor-only mode:', error);
+        alert('Failed to save preferences. Please try again.');
+        return;
+      }
+      
+      // Save to localStorage (with error handling)
+      try {
+        const sensorOnlyConsents = {
+          camera: false,
+          processing: false,
+          analytics: false,
+          alerts: true
+        };
+        
+        localStorage.setItem('vw-privacy-consents', JSON.stringify(sensorOnlyConsents));
+        localStorage.setItem('vw-privacy-setup-completed', 'true');
+        localStorage.setItem('vw-privacy-mode', 'sensor-only');
+      } catch (localError) {
+        console.error('localStorage error (non-critical):', localError);
+        // Continue anyway since database save succeeded
+      }
+      
+      // Get user role
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', userId)
+        .single();
+      
+      // Navigate based on role
+      if (profile?.role === 'EMPLOYEE') {
+        router.push('/fleet-management-console');
+      } else {
+        router.push('/driver-attention-monitor');
+      }
+      
+      router.refresh();
+    } catch (err: any) {
+      console.error('Sensor-only error:', err);
+      alert('An error occurred. Please try again.');
+    }
   };
 
   const handleClose = () => {
