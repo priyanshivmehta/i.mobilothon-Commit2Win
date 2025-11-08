@@ -9,8 +9,8 @@ export const viewport = {
 };
 
 export const metadata = {
-  title: 'Next.js with Tailwind CSS',
-  description: 'A boilerplate project with Next.js and Tailwind CSS',
+  title: 'VW Driver Attention Platform',
+  description: 'Privacy-first driver attention monitoring for Volkswagen commercial fleet with on-device face mesh analysis',
   icons: {
     icon: [
       { url: '/favicon.ico', type: 'image/x-icon' }

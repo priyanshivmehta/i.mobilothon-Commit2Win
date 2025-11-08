@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import Hero from './components/Hero';
 import ProblemStatement from './components/ProblemStatement';
 import SolutionOverview from './components/SolutionOverview';
@@ -13,6 +14,10 @@ import FinalCTA from './components/FinalCTA';
 import Footer from './components/Footer';
 
 export default function LandingPage() {
+  useEffect(() => {
+    document.title = 'VW Driver Attention Platform - Privacy-First Fleet Safety';
+  }, []);
+
   return (
     <main className="min-h-screen bg-white">
       <Hero />

@@ -18,41 +18,41 @@ export default function UserTypes() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* For Drivers */}
-          <div className="bg-white rounded-2xl p-8 shadow-xl border-2 border-gray-200 hover:border-blue-500 transition-all">
+          <div className="bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl p-8 shadow-xl border-2 border-transparent hover:scale-105 transition-all text-white">
             <div className="flex items-center justify-center w-16 h-16 bg-blue-100 rounded-lg mb-6">
               <Icon name="UserIcon" size={32} className="text-blue-600" />
             </div>
 
-            <h3 className="text-2xl font-bold text-gray-900 mb-3">
+            <h3 className="text-2xl font-bold mb-3">
               For Drivers
             </h3>
             
-            <p className="text-gray-600 mb-6">
+            <p className="text-blue-100 mb-6">
               Personal Safety Assistant
             </p>
 
             <ul className="space-y-3 mb-8">
               <li className="flex items-start gap-3">
                 <Icon name="CheckCircleIcon" size={20} className="text-green-500 flex-shrink-0 mt-0.5" />
-                <span className="text-gray-700">Stay alert on long drives</span>
+                <span>Stay alert on long drives</span>
               </li>
               <li className="flex items-start gap-3">
                 <Icon name="CheckCircleIcon" size={20} className="text-green-500 flex-shrink-0 mt-0.5" />
-                <span className="text-gray-700">Privacy-protected monitoring</span>
+                <span >Privacy-protected monitoring</span>
               </li>
               <li className="flex items-start gap-3">
                 <Icon name="CheckCircleIcon" size={20} className="text-green-500 flex-shrink-0 mt-0.5" />
-                <span className="text-gray-700">Personalized fatigue insights</span>
+                <span >Personalized fatigue insights</span>
               </li>
               <li className="flex items-start gap-3">
                 <Icon name="CheckCircleIcon" size={20} className="text-green-500 flex-shrink-0 mt-0.5" />
-                <span className="text-gray-700">Free for individual use</span>
+                <span>Free for individual use</span>
               </li>
             </ul>
 
             <Link
               href="/auth/driver/signup"
-              className="block w-full text-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-all shadow-md hover:shadow-lg"
+              className="block w-full text-center px-6 py-3 bg-white text-blue-600 hover:bg-gray-100 font-semibold rounded-lg transition-all shadow-md hover:shadow-lg"
             >
               Try Driver Monitor
             </Link>

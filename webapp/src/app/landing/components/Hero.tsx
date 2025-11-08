@@ -32,19 +32,27 @@ export default function Hero() {
           </p>
 
           {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4">
-            <Link
-              href="/auth/driver/signup"
-              className="px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
-            >
-              Start Monitoring
-            </Link>
-            <Link
-              href="/auth/fleet/signup"
-              className="px-8 py-4 bg-white/10 hover:bg-white/20 text-white font-semibold rounded-lg transition-all backdrop-blur-sm border border-white/20"
-            >
-              Fleet Management
-            </Link>
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <Link
+                href="/auth/driver/signup"
+                className="px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-all shadow-lg hover:shadow-xl transform hover:scale-105 text-center"
+              >
+                Get Started as Driver
+              </Link>
+              <Link
+                href="/auth/fleet/signup"
+                className="px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-all backdrop-blur-sm border border-white/20 text-center"
+              >
+                Fleet Management
+              </Link>
+            </div>
+            <div className="flex items-center justify-center gap-2 text-sm text-gray-300">
+              Already have an account?
+              <Link href="/auth/signin" className="text-blue-400 hover:text-blue-300 font-semibold underline">
+                Sign In Here
+              </Link>
+            </div>
           </div>
 
           {/* Trust badges */}

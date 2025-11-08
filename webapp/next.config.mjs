@@ -27,7 +27,8 @@ const nextConfig = {
     return [
       {
         source: '/',
-        destination: '/driver-attention-monitor',
+        // Root should land on the public landing page for all users
+        destination: '/landing',
         permanent: false,
       },
     ];

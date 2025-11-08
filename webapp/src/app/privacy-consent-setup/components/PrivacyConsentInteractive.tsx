@@ -263,11 +263,11 @@ const PrivacyConsentInteractive = () => {
       <div className="fixed inset-0 bg-gradient-to-br from-background via-background to-muted/20" />
       
       {/* Modal Overlay */}
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
         <div className="absolute inset-0 bg-background/80 backdrop-blur-glass" />
         
         {/* Modal Content */}
-        <div className="relative w-full max-w-4xl max-h-[90vh] bg-card border border-border rounded-xl shadow-elevation-3 overflow-hidden">
+          <div className="relative z-[10000] w-full max-w-4xl max-h-[90vh] bg-card border border-border rounded-xl shadow-elevation-3 overflow-hidden">
           <div className="flex flex-col h-full max-h-[90vh]">
             {/* Header */}
             <div className="flex-shrink-0 p-6 border-b border-border">
