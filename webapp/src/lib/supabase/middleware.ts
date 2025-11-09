@@ -29,6 +29,11 @@ export async function updateSession(request: NextRequest) {
 
   const path = request.nextUrl.pathname
 
+  // Allow root and landing page to pass through unconditionally
+  if (path === '/' || path === '/landing') {
+    return supabaseResponse
+  }
+
   // Skip auth check for static assets and API routes to improve performance
   if (
     path.startsWith('/_next') ||
@@ -66,15 +71,20 @@ export async function updateSession(request: NextRequest) {
     console.error('Auth check failed:', error)
   }
 
+  // IMPORTANT: Always allow root path and landing page to pass through
+  // Let page.tsx handle the redirect logic
+  if (path === '/' || path === '/landing') {
+    return supabaseResponse
+  }
+
   // Public paths that don't require authentication
-  const publicPaths = ['/', '/landing']
   const isAuthPath = path.startsWith('/auth/')
   const isPrivacySetup = path.startsWith('/privacy-consent-setup')
 
   // Redirect logic based on authentication and role
   if (!user) {
-    // Allow public paths and auth pages
-    if (publicPaths.includes(path) || isAuthPath) {
+    // Allow auth pages
+    if (isAuthPath) {
       return supabaseResponse
     }
 

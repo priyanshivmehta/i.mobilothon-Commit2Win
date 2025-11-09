@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import Icon from '@/components/ui/AppIcon';
+import Portal from '@/components/ui/Portal';
 
 interface HeaderProps {
   className?: string;
@@ -65,7 +66,9 @@ const Header = ({ className = '', userRole = null }: HeaderProps) => {
   // Filter navigation items based on user role
   const visibleNavigationItems = userRole === 'USER' 
     ? navigationItems.filter(item => item.role === 'driver') 
-    : navigationItems; // EMPLOYEE sees both
+    : userRole === 'EMPLOYEE'
+    ? navigationItems.filter(item => item.role === 'fleet')
+    : navigationItems; // Show both only if role is not set
 
   const getCurrentRole = (): 'driver' | 'fleet' | null => {
     if (pathname === '/driver-attention-monitor') return 'driver';
@@ -111,7 +114,7 @@ const Header = ({ className = '', userRole = null }: HeaderProps) => {
 
   return (
     <>
-      <header className={`fixed top-0 left-0 right-0 z-100 bg-background border-b border-border ${className}`}>
+  <header className={`fixed top-0 left-0 right-0 z-40 bg-background border-b border-border ${className}`}>
         <div className="flex items-center justify-between h-16 px-6">
           {/* Logo Section */}
           {/* Logo Section */}
@@ -227,12 +230,13 @@ const Header = ({ className = '', userRole = null }: HeaderProps) => {
 
       {/* Privacy Consent Modal */}
       {showPrivacyModal && (
-        <div className="fixed inset-0 z-200 flex items-center justify-center">
-          <div 
-            className="absolute inset-0 bg-background/80 backdrop-blur-glass"
-            onClick={closePrivacyModal}
-          />
-          <div className="relative bg-card border border-border rounded-lg shadow-elevation-3 max-w-md w-full mx-4 p-6">
+        <Portal>
+          <div className="fixed inset-0 z-[99999] flex items-center justify-center">
+            <div 
+              className="absolute inset-0 bg-background/80 backdrop-blur-glass"
+              onClick={closePrivacyModal}
+            />
+            <div className="relative z-[100000] bg-card border border-border rounded-lg shadow-elevation-3 max-w-md w-full mx-4 p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-foreground">Privacy Settings</h3>
               <button
@@ -277,6 +281,7 @@ const Header = ({ className = '', userRole = null }: HeaderProps) => {
             </div>
           </div>
         </div>
+      </Portal>
       )}
     </>
   );

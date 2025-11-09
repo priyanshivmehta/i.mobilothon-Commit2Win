@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -12,6 +12,10 @@ export default function FleetSignIn() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    document.title = "Fleet Manager Sign In - VW Driver Attention Platform";
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,7 +42,9 @@ export default function FleetSignIn() {
 
       if (profile?.role !== "EMPLOYEE") {
         await supabase.auth.signOut();
-        setError("This account is not registered as a fleet manager. Please use driver login.");
+        setError(
+          "This account is not registered as a fleet manager. Please use driver login."
+        );
         setLoading(false);
         return;
       }
@@ -100,7 +106,7 @@ export default function FleetSignIn() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
               Password
             </label>
             <input

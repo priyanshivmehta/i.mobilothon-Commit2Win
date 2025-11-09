@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Icon from '@/components/ui/AppIcon';
+import Portal from '@/components/ui/Portal';
 
 interface PrivacyControlsProps {
   isPrivacyMode: boolean;
@@ -112,12 +113,13 @@ const PrivacyControls = ({ isPrivacyMode, onPrivacyModeChange, className = '' }:
 
       {/* Privacy Consent Modal */}
       {showConsentModal && (
-        <div className="fixed inset-0 z-200 flex items-center justify-center">
-          <div 
-            className="absolute inset-0 bg-background/80 backdrop-blur-glass"
-            onClick={closeConsentModal}
-          />
-          <div className="relative bg-card border border-border rounded-lg shadow-elevation-3 max-w-lg w-full mx-4 p-6">
+        <Portal>
+          <div className="fixed inset-0 z-[99999] flex items-center justify-center">
+            <div 
+              className="absolute inset-0 bg-background/80 backdrop-blur-glass"
+              onClick={closeConsentModal}
+            />
+            <div className="relative z-[100000] bg-card border border-border rounded-lg shadow-elevation-3 max-w-lg w-full mx-4 p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-foreground">Privacy & Data Processing</h3>
               <button
@@ -189,8 +191,9 @@ const PrivacyControls = ({ isPrivacyMode, onPrivacyModeChange, className = '' }:
                 Manage Settings
               </Link>
             </div>
+            </div>
           </div>
-        </div>
+        </Portal>
       )}
     </>
   );

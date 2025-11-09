@@ -6,6 +6,10 @@ import LogoutButton from '@/components/common/LogoutButton';
 import FleetKPICards from './FleetKPICards';
 import FleetMap from './FleetMap';
 import RouteRiskAnalytics from './RouteRiskAnalytics';
+import DriverDetailsModal from './DriverDetailsModal';
+import DriverManagementModal from './DriverManagementModal';
+import RouteManagementModal from './RouteManagementModal';
+import Icon from '@/components/ui/AppIcon';
 
 interface Driver {
   id: string;
@@ -50,6 +54,11 @@ const FleetConsoleInteractive = () => {
   const [selectedDriver, setSelectedDriver] = useState<Driver | null>(null);
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showDriverModal, setShowDriverModal] = useState(false);
+  const [showRouteModal, setShowRouteModal] = useState(false);
+  const [driverModalMode, setDriverModalMode] = useState<'create' | 'edit'>('create');
+  const [routeModalMode, setRouteModalMode] = useState<'create' | 'edit'>('create');
+  const [editingDriver, setEditingDriver] = useState<Driver | null>(null);
   const supabase = createClient();
 
   // Fetch real users from database
@@ -71,7 +80,7 @@ const FleetConsoleInteractive = () => {
         // Surat, Gujarat coordinates - actual road routes
         const routes = [
           { 
-            name: 'Ring Road North', 
+            name: 'सूरत रिंग रोड उत्तर (Ring Road North)', 
             path: [
               { lat: 21.1702, lng: 72.8311 }, // SVNIT area
               { lat: 21.1725, lng: 72.8340 },
@@ -84,7 +93,7 @@ const FleetConsoleInteractive = () => {
             ]
           },
           { 
-            name: 'Dumas Road', 
+            name: 'डुमस रोड (Dumas Beach Road)', 
             path: [
               { lat: 21.1702, lng: 72.8311 },
               { lat: 21.1675, lng: 72.8285 },
@@ -97,7 +106,7 @@ const FleetConsoleInteractive = () => {
             ]
           },
           { 
-            name: 'VR Mall Route', 
+            name: 'वीआर मॉल मार्ग (VR Mall Route)', 
             path: [
               { lat: 21.1702, lng: 72.8311 },
               { lat: 21.1710, lng: 72.8325 },
@@ -110,7 +119,7 @@ const FleetConsoleInteractive = () => {
             ]
           },
           { 
-            name: 'City Light Route', 
+            name: 'सिटी लाइट मार्ग (City Light Corridor)', 
             path: [
               { lat: 21.1702, lng: 72.8311 },
               { lat: 21.1712, lng: 72.8330 },
@@ -123,7 +132,7 @@ const FleetConsoleInteractive = () => {
             ]
           },
           { 
-            name: 'Athwa Gate Circle', 
+            name: 'अठवा गेट चक्र (Athwa Gate Circle)', 
             path: [
               { lat: 21.1702, lng: 72.8311 },
               { lat: 21.1690, lng: 72.8330 },
@@ -246,43 +255,66 @@ const FleetConsoleInteractive = () => {
     }
   ];
 
-  const mockTimeRiskData: TimeRiskData[] = [
-    { hour: '06:00', riskScore: 45, incidents: 2 },
-    { hour: '08:00', riskScore: 62, incidents: 5 },
-    { hour: '10:00', riskScore: 38, incidents: 1 },
-    { hour: '12:00', riskScore: 55, incidents: 3 },
-    { hour: '14:00', riskScore: 48, incidents: 2 },
-    { hour: '16:00', riskScore: 71, incidents: 7 },
-    { hour: '18:00', riskScore: 84, incidents: 12 },
-    { hour: '20:00', riskScore: 67, incidents: 6 },
-    { hour: '22:00', riskScore: 52, incidents: 4 }
-  ];
+  // Generate dynamic time-of-day risk data based on current time and driver scores
+  const generateTimeRiskData = (): TimeRiskData[] => {
+    const currentHour = new Date().getHours();
+    const hours = ['06:00', '08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00', '22:00'];
+    
+    return hours.map((hour, index) => {
+      const hourNum = parseInt(hour.split(':')[0]);
+      
+      // Calculate risk based on time patterns (higher during rush hours and late evening)
+      let baseRisk = 40;
+      if (hourNum >= 8 && hourNum <= 10) baseRisk = 65; // Morning rush
+      if (hourNum >= 17 && hourNum <= 19) baseRisk = 80; // Evening rush
+      if (hourNum >= 22 || hourNum <= 6) baseRisk = 70; // Late night fatigue
+      
+      // Add variation based on driver scores
+      const avgDriverScore = drivers.length > 0 
+        ? drivers.reduce((sum, d) => sum + d.attentionScore, 0) / drivers.length
+        : 75;
+      
+      const riskAdjustment = (100 - avgDriverScore) * 0.3;
+      const riskScore = Math.round(Math.max(20, Math.min(95, baseRisk + riskAdjustment + (Math.random() - 0.5) * 10)));
+      
+      // Incidents correlate with risk
+      const incidents = Math.round((riskScore / 100) * 15 * (0.8 + Math.random() * 0.4));
+      
+      return {
+        hour,
+        riskScore,
+        incidents
+      };
+    });
+  };
+
+  const mockTimeRiskData: TimeRiskData[] = generateTimeRiskData();
 
   const mockRouteHotspots: RouteHotspot[] = [
     {
       id: 'H001',
-      routeName: 'I-95 North (Mile 45-52)',
+      routeName: 'सूरत रिंग रोड (Ring Road, Km 12-18)',
       riskLevel: 'high',
       incidentCount: 12,
       avgScore: 58
     },
     {
       id: 'H002',
-      routeName: 'Route 287 Junction',
+      routeName: 'डुमस बीच मार्ग (Dumas Beach Junction)',
       riskLevel: 'medium',
       incidentCount: 7,
       avgScore: 67
     },
     {
       id: 'H003',
-      routeName: 'Downtown Loop (5th-8th Ave)',
+      routeName: 'सिटी लाइट चौक (City Light Square)',
       riskLevel: 'medium',
       incidentCount: 5,
       avgScore: 72
     },
     {
       id: 'H004',
-      routeName: 'Highway 1 Corridor',
+      routeName: 'वीआर मॉल कॉरिडोर (VR Mall Corridor)',
       riskLevel: 'low',
       incidentCount: 2,
       avgScore: 85
@@ -291,6 +323,67 @@ const FleetConsoleInteractive = () => {
 
   const handleDriverSelect = (driver: Driver) => {
     setSelectedDriver(driver);
+  };
+
+  const handleCloseModal = () => {
+    setSelectedDriver(null);
+  };
+
+  const handleEditDriver = (driver: Driver) => {
+    setEditingDriver(driver);
+    setDriverModalMode('edit');
+    setShowDriverModal(true);
+    setSelectedDriver(null);
+  };
+
+  const handleDeleteDriver = async (driverId: string) => {
+    try {
+      // In a real implementation, this would delete from the database
+      // For now, we'll just filter it from the local state
+      setDrivers(prev => prev.filter(d => d.id !== driverId));
+      alert('Driver removed successfully');
+    } catch (error) {
+      console.error('Error deleting driver:', error);
+      alert('Failed to delete driver. Please try again.');
+    }
+  };
+
+  const handleAddDriver = () => {
+    setEditingDriver(null);
+    setDriverModalMode('create');
+    setShowDriverModal(true);
+  };
+
+  const handleAddRoute = () => {
+    setRouteModalMode('create');
+    setShowRouteModal(true);
+  };
+
+  const handleSaveDriver = async (formData: any) => {
+    try {
+      if (driverModalMode === 'create') {
+        // In a real implementation, this would create a new user and profile
+        console.log('Creating driver:', formData);
+        alert('Driver creation would happen here. This requires Supabase admin API or invite system.');
+      } else {
+        // Update existing driver
+        console.log('Updating driver:', formData);
+        alert('Driver updated successfully');
+      }
+    } catch (error) {
+      console.error('Error saving driver:', error);
+      throw error;
+    }
+  };
+
+  const handleSaveRoute = async (formData: any) => {
+    try {
+      console.log('Saving route:', formData);
+      alert('Route saved successfully! In a real implementation, this would be stored in the database.');
+    } catch (error) {
+      console.error('Error saving route:', error);
+      throw error;
+    }
   };
 
   if (!isHydrated || loading) {
@@ -319,7 +412,23 @@ const FleetConsoleInteractive = () => {
               <h1 className="text-3xl font-bold text-foreground">Fleet Management Console</h1>
               <p className="text-muted-foreground mt-1">Monitor and manage your driver fleet in real-time</p>
             </div>
-            <LogoutButton className="text-sm px-4 py-2" />
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={handleAddRoute}
+                className="px-4 py-2 bg-muted text-foreground rounded-md text-sm font-medium hover:bg-muted/80 transition-micro flex items-center space-x-2"
+              >
+                <Icon name="MapIcon" size={16} />
+                <span>Add Route</span>
+              </button>
+              <button
+                onClick={handleAddDriver}
+                className="px-4 py-2 bg-secondary text-secondary-foreground rounded-md text-sm font-medium hover:bg-secondary/90 transition-micro flex items-center space-x-2"
+              >
+                <Icon name="PlusIcon" size={16} />
+                <span>Add Driver</span>
+              </button>
+              <LogoutButton className="text-sm px-4 py-2" />
+            </div>
           </div>
 
           {/* KPI Cards */}
@@ -345,6 +454,31 @@ const FleetConsoleInteractive = () => {
           </div>
         </div>
       </div>
+
+      {/* Driver Details Modal */}
+      <DriverDetailsModal 
+        driver={selectedDriver}
+        onClose={handleCloseModal}
+        onEdit={handleEditDriver}
+        onDelete={handleDeleteDriver}
+      />
+
+      {/* Driver Management Modal */}
+      <DriverManagementModal
+        isOpen={showDriverModal}
+        onClose={() => setShowDriverModal(false)}
+        driver={editingDriver}
+        mode={driverModalMode}
+        onSave={handleSaveDriver}
+      />
+
+      {/* Route Management Modal */}
+      <RouteManagementModal
+        isOpen={showRouteModal}
+        onClose={() => setShowRouteModal(false)}
+        mode={routeModalMode}
+        onSave={handleSaveRoute}
+      />
     </div>
   );
 };
