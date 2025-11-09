@@ -73,7 +73,7 @@ export default function Hero() {
               Already have an account?
               <Link
                 href="/auth/signin"
-                className="text-[#026f83] hover:text-blue-300 font-semibold underline"
+                className="text-gray-300 hover:text-blue-300 underline"
               >
                 Sign In Here
               </Link>
