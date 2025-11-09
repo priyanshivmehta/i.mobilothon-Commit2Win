@@ -559,15 +559,6 @@ We welcome contributions! See [CONTRIBUTING.md](./CONTRIBUTING.md) for guideline
 
 ---
 
-## 📞 Contact
-
-- **Email**: team@vw-driver-attention.com
-- **Demo**: [https://vw-driver-platform.vercel.app](https://vw-driver-platform.vercel.app)
-- **Pitch Deck**: [Link to presentation]
-- **Video Demo**: [YouTube link]
-
----
-
 ## 🏆 Acknowledgments
 
 Built with ❤️ for **i.Mobiothon 5.0** by a team passionate about road safety.
