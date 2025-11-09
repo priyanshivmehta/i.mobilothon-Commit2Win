@@ -174,19 +174,27 @@ const CameraFeed = ({ isPrivacyMode, onCameraStatus, env, onPrediction, showPrev
           }
         };
 
-        const res = await fetch('http://localhost:5000/predict', {
+        console.log('🚀 Sending frame to ML server...');
+        const localdev = "http://localhost:5000/predict"; // use this for local development
+        const proddev = "https://neemsheth-i-mobilothon-commit2win-mlserver.hf.space/predict"; //  use this for production
+        const res = await fetch(proddev, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
 
-        if (!res.ok) return;
+        if (!res.ok) {
+          console.error('ML Server Error:', res.status, res.statusText);
+          return;
+        }
         const json = await res.json();
         const result = json.result;
         const sensors = json.sensors || {};
+        console.log('✅ ML Prediction received:', result);
         if (onPrediction) onPrediction({ ...result, sensors });
 
       } catch (e) {
+        console.error('❌ Failed to call ML server:', e);
         // ignore network errors for now
       }
     };
