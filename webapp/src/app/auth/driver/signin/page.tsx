@@ -30,7 +30,6 @@ export default function DriverSignIn() {
         return;
       }
 
-      // Verify user is a driver (USER role)
       const { data: profile } = await supabase
         .from("profiles")
         .select("role")
@@ -44,7 +43,6 @@ export default function DriverSignIn() {
         return;
       }
 
-      // Redirect to driver monitor
       router.push("/driver-attention-monitor");
       router.refresh();
     } catch (err: any) {
@@ -54,18 +52,24 @@ export default function DriverSignIn() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
-      <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0b1320] via-[#102a43] to-[#1a365d]">
+      <div className="bg-white/95 backdrop-blur-lg p-10 rounded-2xl shadow-2xl w-full max-w-md border border-gray-100">
+        {/* Brand Logo */}
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-blue-600 rounded-xl flex items-center justify-center mx-auto mb-4">
-            <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-            </svg>
+          <div className="w-20 h-20 mx-auto mb-4 transform hover:rotate-12 transition-transform duration-300">
+            <img
+              src="/icons-removebg-preview.png"
+              alt="OptiDrive Logo"
+              className="w-20 h-20 object-contain drop-shadow-md"
+            />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900">Driver Sign In</h1>
-          <p className="text-gray-600 mt-2">Access your attention monitoring dashboard</p>
+          <h1 className="text-black text-3xl" style={{
+    fontFamily: "'Rubik', 'Poppins', sans-serif",
+    letterSpacing: '0.5px',
+  }}><b>OptiDrive</b></h1>
         </div>
 
+        {/* Sign-In Form */}
         <form onSubmit={handleSubmit} className="space-y-6">
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg text-sm">
@@ -75,13 +79,13 @@ export default function DriverSignIn() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Email
+              Email Address
             </label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0077b6] focus:border-transparent text-gray-900 bg-white transition"
               placeholder="your.email@example.com"
               required
             />
@@ -95,7 +99,7 @@ export default function DriverSignIn() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0077b6] focus:border-transparent text-gray-900 bg-white transition"
               placeholder="••••••••"
               required
             />
@@ -104,22 +108,30 @@ export default function DriverSignIn() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-[#026f83] hover:bg-[#005f8f] text-white font-semibold py-3 rounded-lg transition-colors duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ fontFamily: "'Rubik', 'Poppins', sans-serif" }}
           >
             {loading ? "Signing in..." : "Sign In"}
           </button>
         </form>
 
+        {/* Footer Links */}
         <div className="mt-6 text-center text-sm text-gray-600">
           Don&apos;t have an account?{" "}
-          <Link href="/auth/driver/signup" className="text-blue-600 hover:underline font-medium">
+          <Link
+            href="/auth/driver/signup"
+            className="text-[#026f83] hover:underline font-medium"
+          >
             Sign up as driver
           </Link>
         </div>
 
-        <div className="mt-4 text-center text-sm text-gray-600">
+        <div className="mt-3 text-center text-sm text-gray-600">
           Are you a fleet manager?{" "}
-          <Link href="/auth/fleet/signin" className="text-blue-600 hover:underline font-medium">
+          <Link
+            href="/auth/fleet/signin"
+            className="text-[#026f83] hover:underline font-medium"
+          >
             Fleet login
           </Link>
         </div>

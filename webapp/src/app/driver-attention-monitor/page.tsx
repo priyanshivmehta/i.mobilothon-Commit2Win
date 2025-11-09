@@ -11,7 +11,7 @@ const DriverMonitorInteractive = dynamic(
 );
 
 export const metadata: Metadata = {
-  title: 'Driver Attention Monitor - VW Driver Attention Platform',
+  title: 'Driver Attention Monitor - OptiDrive',
   description: 'Real-time driver attention assessment using on-device face mesh analysis with privacy-first monitoring for Volkswagen commercial drivers.',
 };
 

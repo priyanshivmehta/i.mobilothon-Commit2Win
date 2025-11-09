@@ -30,7 +30,6 @@ export default function FleetSignIn() {
         return;
       }
 
-      // Verify user is a fleet manager (EMPLOYEE role)
       const { data: profile } = await supabase
         .from("profiles")
         .select("role")
@@ -44,7 +43,6 @@ export default function FleetSignIn() {
         return;
       }
 
-      // Redirect to fleet management console
       router.push("/fleet-management-console");
       router.refresh();
     } catch (err: any) {
@@ -54,18 +52,32 @@ export default function FleetSignIn() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
-      <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0b1320] via-[#0e2433] to-[#103f5c]">
+      <div className="bg-white/95 backdrop-blur-lg p-10 rounded-2xl shadow-2xl w-full max-w-md border border-gray-100">
+        {/* Logo + Branding */}
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-blue-600 rounded-xl flex items-center justify-center mx-auto mb-4">
-            <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-            </svg>
+          <div className="w-20 h-20 mx-auto mb-4 transform hover:rotate-12 transition-transform duration-300">
+            <img
+              src="/icons-removebg-preview.png"
+              alt="OptiDrive Logo"
+              className="w-20 h-20 object-contain drop-shadow-md"
+            />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900">Fleet Manager</h1>
-          <p className="text-gray-600 mt-2">Volkswagen Fleet Management Console</p>
+          <h1
+            className="text-3xl font-semibold text-gray-900"
+            style={{
+              fontFamily: "'Rubik', 'Poppins', sans-serif",
+              letterSpacing: "0.5px",
+            }}
+          >
+            OptiDrive Fleet
+          </h1>
+          <p className="text-gray-600 mt-1 text-sm tracking-wide">
+            Volkswagen Fleet Management Console
+          </p>
         </div>
 
+        {/* Sign-In Form */}
         <form onSubmit={handleSubmit} className="space-y-6">
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg text-sm">
@@ -75,13 +87,13 @@ export default function FleetSignIn() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Email
+              Fleet Email
             </label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#026f83] focus:border-transparent text-gray-900 bg-white transition"
               placeholder="you@volkswagen.com"
               required
             />
@@ -95,7 +107,7 @@ export default function FleetSignIn() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#026f83] focus:border-transparent text-gray-900 bg-white transition"
               placeholder="••••••••"
               required
             />
@@ -104,22 +116,30 @@ export default function FleetSignIn() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-[#026f83] hover:bg-[#015b6b] text-white font-semibold py-3 rounded-lg transition-colors duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ fontFamily: "'Rubik', 'Poppins', sans-serif" }}
           >
             {loading ? "Signing in..." : "Sign In"}
           </button>
         </form>
 
+        {/* Footer Links */}
         <div className="mt-6 text-center text-sm text-gray-600">
-          Don&apos;t have an account?{" "}
-          <Link href="/auth/fleet/signup" className="text-blue-600 hover:underline font-medium">
-            Request fleet access
+          Don&apos;t have fleet access?{" "}
+          <Link
+            href="/auth/fleet/signup"
+            className="text-[#026f83] hover:underline font-medium"
+          >
+            Request account
           </Link>
         </div>
 
-        <div className="mt-4 text-center text-sm text-gray-600">
+        <div className="mt-3 text-center text-sm text-gray-600">
           Are you a driver?{" "}
-          <Link href="/auth/driver/signin" className="text-blue-600 hover:underline font-medium">
+          <Link
+            href="/auth/driver/signin"
+            className="text-[#026f83] hover:underline font-medium"
+          >
             Driver login
           </Link>
         </div>

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 
 type Role = "USER" | "EMPLOYEE";
@@ -26,7 +27,6 @@ export default function SignUp() {
     e.preventDefault();
     setError("");
 
-    // Validation
     if (formData.password !== formData.confirmPassword) {
       setError("Passwords do not match");
       return;
@@ -39,7 +39,7 @@ export default function SignUp() {
 
     if (formData.role === "EMPLOYEE") {
       if (!formData.employeeId || !formData.department) {
-        setError("Employee ID and department required for employee accounts");
+        setError("Employee ID and department are required for employee accounts");
         return;
       }
 
@@ -52,9 +52,6 @@ export default function SignUp() {
     setLoading(true);
 
     try {
-      console.log("Step 1: Checking for duplicate employee ID...");
-      
-      // Step 1: Check for duplicate employee ID first
       if (formData.role === "EMPLOYEE" && formData.employeeId) {
         const { data: existingEmployee } = await supabase
           .from("profiles")
@@ -69,21 +66,15 @@ export default function SignUp() {
         }
       }
 
-      console.log("Step 2: Creating auth user...");
-
-      // Step 2: Sign up user
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
         options: {
-          data: {
-            name: formData.name,
-          },
+          data: { name: formData.name },
         },
       });
 
       if (signUpError) {
-        console.error("Auth signup error:", signUpError);
         setError(signUpError.message);
         setLoading(false);
         return;
@@ -95,10 +86,6 @@ export default function SignUp() {
         return;
       }
 
-      console.log("Step 3: Auth user created:", authData.user.id);
-      console.log("Step 4: Creating profile...");
-
-      // Step 3: Insert profile
       const profileData = {
         id: authData.user.id,
         name: formData.name,
@@ -110,46 +97,52 @@ export default function SignUp() {
         analytics_consent: false,
       };
 
-      console.log("Profile data:", profileData);
-
-      const { data: profileResult, error: profileError } = await supabase
-        .from("profiles")
-        .insert(profileData)
-        .select()
-        .single();
+      const { error: profileError } = await supabase.from("profiles").insert(profileData);
 
       if (profileError) {
-        console.error("Profile creation error:", {
-          message: profileError.message,
-          details: profileError.details,
-          hint: profileError.hint,
-          code: profileError.code
-        });
         setError(`Profile setup failed: ${profileError.message}`);
         setLoading(false);
         return;
       }
 
-      console.log("Step 5: Profile created successfully:", profileResult);
-
-      // Step 4: Redirect to privacy consent
       router.push("/privacy-consent-setup");
       router.refresh();
     } catch (err: any) {
-      console.error("Signup error:", err);
       setError(err.message || "An error occurred during signup");
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 py-12">
-      <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0b1320] via-[#0e2433] to-[#103f5c] py-12">
+      <div className="bg-white/95 backdrop-blur-lg p-10 rounded-2xl shadow-2xl w-full max-w-md border border-gray-100">
+        {/* ✅ Branding Header */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Create Account</h1>
-          <p className="text-gray-600 mt-2">Join Volkswagen Safety Platform</p>
+          <div className="w-20 h-20 mx-auto mb-4 transform hover:rotate-12 transition-transform duration-300">
+            <Image
+              src="/icons-removebg-preview.png"
+              alt="OptiDrive Logo"
+              width={80}
+              height={80}
+              className="mx-auto object-contain drop-shadow-md"
+              priority
+            />
+          </div>
+          <h1
+            className="text-3xl font-semibold text-gray-900"
+            style={{
+              fontFamily: "'Rubik', 'Poppins', sans-serif",
+              letterSpacing: "0.5px",
+            }}
+          >
+            OptiDrive
+          </h1>
+          <p className="text-gray-600 mt-1 text-sm tracking-wide">
+            Volkswagen Driver & Fleet Safety Platform
+          </p>
         </div>
 
+        {/* ✅ Form Section */}
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg text-sm">
@@ -165,39 +158,38 @@ export default function SignUp() {
             <select
               value={formData.role}
               onChange={(e) => setFormData({ ...formData, role: e.target.value as Role })}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#026f83] text-gray-900 bg-white"
             >
               <option value="USER">Driver</option>
               <option value="EMPLOYEE">Fleet Manager (Employee)</option>
             </select>
           </div>
 
+          {/* Name */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Full Name
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
             <input
               type="text"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#026f83] text-gray-900 bg-white"
               required
             />
           </div>
 
+          {/* Email */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Email
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
             <input
               type="email"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#026f83] text-gray-900 bg-white"
               required
             />
           </div>
 
+          {/* Employee Fields */}
           {formData.role === "EMPLOYEE" && (
             <>
               <div>
@@ -208,21 +200,19 @@ export default function SignUp() {
                   type="text"
                   value={formData.employeeId}
                   onChange={(e) => setFormData({ ...formData, employeeId: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#026f83] text-gray-900 bg-white"
                   placeholder="VW-1234"
-                  required={formData.role === "EMPLOYEE"}
+                  required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Department
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Department</label>
                 <select
                   value={formData.department}
                   onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
-                  required={formData.role === "EMPLOYEE"}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#026f83] text-gray-900 bg-white"
+                  required
                 >
                   <option value="">Select Department</option>
                   <option value="Fleet Operations">Fleet Operations</option>
@@ -234,44 +224,43 @@ export default function SignUp() {
             </>
           )}
 
+          {/* Passwords */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Password
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
             <input
               type="password"
               value={formData.password}
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#026f83] text-gray-900 bg-white"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Confirm Password
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Confirm Password</label>
             <input
               type="password"
               value={formData.confirmPassword}
               onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#026f83] text-gray-900 bg-white"
               required
             />
           </div>
 
+          {/* Submit Button */}
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition-colors disabled:opacity-50"
+            className="w-full bg-[#026f83] hover:bg-[#015b6b] text-white font-semibold py-3 rounded-lg transition-colors duration-300 disabled:opacity-50"
           >
             {loading ? "Creating Account..." : "Sign Up"}
           </button>
         </form>
 
+        {/* Footer */}
         <div className="mt-6 text-center text-sm text-gray-600">
           Already have an account?{" "}
-          <Link href="/auth/signin" className="text-blue-600 hover:underline font-medium">
+          <Link href="/auth/signin" className="text-[#026f83] hover:underline font-medium">
             Sign in
           </Link>
         </div>

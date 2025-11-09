@@ -114,21 +114,36 @@ const Header = ({ className = '', userRole = null }: HeaderProps) => {
       <header className={`fixed top-0 left-0 right-0 z-100 bg-background border-b border-border ${className}`}>
         <div className="flex items-center justify-between h-16 px-6">
           {/* Logo Section */}
-          <div className="flex items-center space-x-8">
-            <Link href="/landing" className="flex items-center space-x-3 transition-micro hover:opacity-80">
-              <div className="w-8 h-8 bg-secondary rounded-sm flex items-center justify-center">
-                <span className="text-secondary-foreground font-semibold text-sm">VW</span>
-              </div>
-              <div className="flex flex-col">
-                <span className="text-foreground font-medium text-sm leading-tight">
-                  Driver Attention Platform
-                </span>
-                <span className="text-muted-foreground text-xs">
-                  Safety Technology Suite
-                </span>
-              </div>
-            </Link>
-          </div>
+          {/* Logo Section */}
+<div className="flex items-center space-x-8">
+  <Link href="/landing" className="flex items-center space-x-3 transition-micro hover:opacity-80">
+    {/* Updated Logo Image */}
+    <div className="w-9 h-9 flex items-center justify-center">
+      <img
+        src="/icons-removebg-preview.png"
+        alt="OptiDrive Logo"
+        className="w-9 h-9 object-contain drop-shadow-md"
+      />
+    </div>
+
+    {/* Brand Text */}
+    <div className="flex flex-col leading-tight">
+      <span
+        className="text-foreground font-semibold text-[18px] tracking-wide"
+        style={{
+              fontFamily: "'Rubik', 'Poppins', sans-serif",
+              letterSpacing: "0.5px",
+            }}
+      >
+        OptiDrive
+      </span>
+      <span className="text-muted-foreground text-[11px] tracking-wide">
+        Safety Technology Suite
+      </span>
+    </div>
+  </Link>
+</div>
+
 
           {/* Role Toggle Navigation - Only show if user has multiple options */}
           {visibleNavigationItems.length > 1 && (
